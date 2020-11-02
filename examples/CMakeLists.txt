@@ -23,3 +23,10 @@ target_link_libraries(hotstuff-app hotstuff_static)
 
 add_executable(hotstuff-client hotstuff_client.cpp)
 target_link_libraries(hotstuff-client hotstuff_static)
+
+
+add_executable(pompe-app pompe_app.cpp)
+target_link_libraries(pompe-app hotstuff_static)
+
+add_executable(pompe-client pompe_client.cpp)
+target_link_libraries(pompe-client hotstuff_static)

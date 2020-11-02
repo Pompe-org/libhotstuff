@@ -34,8 +34,13 @@ using salticidae::Config;
 using hotstuff::ReplicaID;
 using hotstuff::NetAddr;
 using hotstuff::EventContext;
-using hotstuff::MsgReqCmd;
+//using hotstuff::MsgReqCmd;
+using hotstuff::MsgOrdering1ReqCmd;
+using hotstuff::MsgOrdering2ReqCmd;
 using hotstuff::MsgRespCmd;
+using hotstuff::MsgOrdering1RespCmd;
+using hotstuff::MsgOrdering2RespCmd;
+using hotstuff::MsgConsensusRespClientCmd;
 using hotstuff::CommandDummy;
 using hotstuff::HotStuffError;
 using hotstuff::uint256_t;
@@ -53,16 +58,24 @@ uint32_t nfaulty;
 struct Request {
     command_t cmd;
     size_t confirmed;
+    size_t ordering_rtt1;
+    size_t ordering_rtt2;
+    size_t ordering_rtt3;
     salticidae::ElapsedTime et;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0) { et.start(); }
+    salticidae::ElapsedTime et_exec;
+    //    std::vector<std::string> timestamps;
+    std::vector<uint64_t> timestamps;
+    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
 };
 
+int BATCH_SIZE;
+int count_order, count_exec;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
-std::unordered_map<const uint256_t, Request> waiting;
+std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas;
-std::vector<std::pair<struct timeval, double>> elapsed;
+std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
 
 void connect_all() {
@@ -74,8 +87,12 @@ bool try_send(bool check = true) {
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         auto cmd = new CommandDummy(cid, cnt++);
-        MsgReqCmd msg(*cmd);
-        for (auto &p: conns) mn.send_msg(msg, p.second);
+        MsgOrdering1ReqCmd msg(*cmd);
+        //for (auto &p: conns) mn.send_msg(msg, p.second);
+        
+        for (int i = 0; i < BATCH_SIZE; i++) {
+            for (auto &p: conns) mn.send_msg(msg, p.second);
+        }
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
                             get_hex(cmd->get_hash()).c_str());
@@ -113,6 +130,92 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     while (try_send());
 }
 
+void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
+    //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
+    const uint256_t &cmd_hash = msg.cmd_hash;
+    auto it = waiting.find(cmd_hash);
+    if (it == waiting.end()) return;
+    auto &et = it->second.et;    
+
+    //std::string t = std::string(get_hex10(msg.timestamp));
+    it->second.timestamps.push_back(msg.timestamp_us);
+    if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // wait for 2f + 1 timestamps
+
+    // pick the median timestamp, the f+1 th one
+    std::sort(it->second.timestamps.begin(), it->second.timestamps.end());
+    uint64_t median = it->second.timestamps[nfaulty + 1];
+    
+    // send the second rtt message of ordering phase
+    // printf("here1\n");
+    MsgOrdering2ReqCmd next_msg(cmd_hash, median);
+    for (auto &p: conns) {
+        mn.send_msg(next_msg, p.second);
+    }
+}
+
+void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::conn_t &) {
+    //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
+    const uint256_t &cmd_hash = msg.cmd_hash;
+    auto it = waiting.find(cmd_hash);
+    if (it == waiting.end()) return;
+    auto &et = it->second.et;
+    
+
+    if (++it->second.ordering_rtt2 != nfaulty*2+1) return; // wait for 2f + 1 ack
+    et.stop();
+
+#ifndef HOTSTUFF_ENABLE_BENCHMARK
+    HOTSTUFF_LOG_INFO("got %s, wall: %.3f, cpu: %.3f, timestamps: %s",
+                        std::string(get_hex10(cmd_hash)).c_str(),
+                      et.elapsed_sec, et.cpu_elapsed_sec),
+                        std::string(get_hex10(msg.timestamp)).c_str();
+#else
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    //elapsed.push_back(std::make_pair(tv, et.elapsed_sec));
+    count_order++;
+    for (int i = 0; i < BATCH_SIZE; i++)
+        elapsed.push_back(std::make_pair(tv, et.elapsed_sec));
+
+    // for debug
+    //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), std::string(get_hex10(msg.timestamp)).c_str());
+#endif
+    waiting_exec.insert(std::make_pair(it->first, it->second));
+    waiting.erase(it);
+    while (try_send());
+}
+
+
+void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Net::conn_t &) {
+    //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
+    const uint256_t &cmd_hash = msg.cmd_hash;
+    auto it = waiting_exec.find(cmd_hash);
+    if (it == waiting_exec.end()) return;    
+    auto &et_exec = it->second.et_exec;
+
+    if (++it->second.ordering_rtt3 != 1) return; // wait for 1 exec ack
+    et_exec.stop();
+
+#ifndef HOTSTUFF_ENABLE_BENCHMARK
+    // HOTSTUFF_LOG_INFO("executed %s, wall: %.3f, cpu: %.3f",
+    //                     std::string(get_hex10(cmd_hash)).c_str(),
+    //                   et.elapsed_sec, et.cpu_elapsed_sec)).c_str();
+#else
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    //elapsed_exec.push_back(std::make_pair(tv, et_exec.elapsed_sec));
+    count_exec++;
+    for (int i = 0; i < BATCH_SIZE; i++)
+        elapsed_exec.push_back(std::make_pair(tv, et_exec.elapsed_sec));
+
+    // for debug
+    //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), "303030000");
+#endif
+    waiting_exec.erase(it);
+}
+
+
+
 std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
     auto ret = salticidae::trim_all(salticidae::split(s, ";"));
     return std::make_pair(ret[0], ret[1]);
@@ -120,9 +223,11 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 
 int main(int argc, char **argv) {
     Config config(argv[1]);
-    std::string logfile(argv[2]);
+    std::string orderlogfile(argv[2]);
+    std::string execlogfile(argv[3]);
     //Config config("hotstuff.conf");
 
+    auto opt_blk_size = Config::OptValInt::create(1);
     auto opt_idx = Config::OptValInt::create(0);
     auto opt_replicas = Config::OptValStrVec::create();
     auto opt_max_iter_num = Config::OptValInt::create(100);
@@ -135,15 +240,21 @@ int main(int argc, char **argv) {
     ev_sigint.add(SIGINT);
     ev_sigterm.add(SIGTERM);
 
-    mn.reg_handler(client_resp_cmd_handler);
+    //mn.reg_handler(client_resp_cmd_handler);
+    mn.reg_handler(client_ordering1_resp_cmd_handler);
+    mn.reg_handler(client_ordering2_resp_cmd_handler);
+    mn.reg_handler(client_ordering_exec_resp_handler);
     mn.start();
 
+    config.add_opt("block-size", opt_blk_size, Config::SET_VAL);
     config.add_opt("idx", opt_idx, Config::SET_VAL);
     config.add_opt("cid", opt_cid, Config::SET_VAL);
     config.add_opt("replica", opt_replicas, Config::APPEND);
     config.add_opt("iter", opt_max_iter_num, Config::SET_VAL);
     config.add_opt("max-async", opt_max_async_num, Config::SET_VAL);
     config.parse(argc, argv);
+
+    BATCH_SIZE = opt_blk_size->get();
     auto idx = opt_idx->get();
     max_iter_num = opt_max_iter_num->get();
     max_async_num = opt_max_async_num->get();
@@ -174,8 +285,21 @@ int main(int argc, char **argv) {
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
-    printf("write to log file %s, count %d\n", logfile.c_str(), elapsed.size());
-    freopen(logfile.c_str(), "w", stdout);
+    printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
+    printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
+
+    freopen(execlogfile.c_str(), "w", stdout);
+
+    for (const auto &e: elapsed_exec)
+    {
+        char fmt[64];
+        struct tm *tmp = localtime(&e.first.tv_sec);
+        strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
+        fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    }
+
+    
+    freopen(orderlogfile.c_str(), "w", stdout);
 
     for (const auto &e: elapsed)
     {
@@ -185,7 +309,9 @@ int main(int argc, char **argv) {
         fprintf(stdout, fmt, e.first.tv_usec, e.second);
     }
 
+
     fclose(stdout);
+
 #endif
     return 0;
 }
