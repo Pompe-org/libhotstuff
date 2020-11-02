@@ -311,6 +311,70 @@ struct Finality: public Serializable {
     }
 };
 
+struct Ordering1Finality: public Serializable {
+    uint256_t cmd_hash;
+    uint256_t timestamp;
+    uint64_t timestamp_us;
+    SigSecp256k1 sig;
+    
+    public:
+    Ordering1Finality() = default;
+    Ordering1Finality(const uint256_t& _cmd_hash,
+                      const uint256_t& _timestamp,
+                      const uint64_t& _timestamp_us,
+                      const SigSecp256k1& _sig):
+    cmd_hash(_cmd_hash), timestamp(_timestamp), timestamp_us(_timestamp_us), sig(_sig) {}
+
+    void serialize(DataStream &s) const override {
+        s << cmd_hash << timestamp << sig << timestamp_us;
+    }
+
+    void unserialize(DataStream &s) override {
+        s >> cmd_hash >> timestamp >> sig >> timestamp_us;
+    }
+
+    operator std::string () const {
+        DataStream s;
+        s << "<fin-ordering1 "
+          << "cmd=" << get_hex10(cmd_hash) << " "
+          << "timestamp=" << get_hex10(timestamp) 
+          << "timestamp_us=" << timestamp_us << ">";
+        return s;
+    }
+};
+
+struct Ordering2Finality: public Serializable {
+    uint256_t cmd_hash;
+    uint256_t timestamp;
+    SigSecp256k1 sig;
+    
+    public:
+    Ordering2Finality() = default;
+    Ordering2Finality(const uint256_t& _cmd_hash,
+                      const uint256_t& _timestamp,
+                      const SigSecp256k1& _sig):
+    cmd_hash(_cmd_hash), timestamp(_timestamp), sig(_sig) {}
+
+    void serialize(DataStream &s) const override {
+        s << cmd_hash << timestamp << sig;
+    }
+
+    void unserialize(DataStream &s) override {
+        s >> cmd_hash >> timestamp >> sig;
+    }
+
+    operator std::string () const {
+        DataStream s;
+        s << "<fin-ordering2 "
+          << "cmd=" << get_hex10(cmd_hash) << " "
+          << "timestamp=" << get_hex10(timestamp) << ">";
+        return s;
+    }
+};
+
+
+
+
 }
 
 #endif

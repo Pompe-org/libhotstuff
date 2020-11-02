@@ -40,7 +40,7 @@ const double double_inf = 1e10;
 
 /** Network message format for HotStuff. */
 struct MsgPropose {
-    static const opcode_t opcode = 0x0;
+    static const opcode_t opcode = 0x1;
     DataStream serialized;
     Proposal proposal;
     MsgPropose(const Proposal &);
@@ -51,7 +51,7 @@ struct MsgPropose {
 };
 
 struct MsgVote {
-    static const opcode_t opcode = 0x1;
+    static const opcode_t opcode = 0x2;
     DataStream serialized;
     Vote vote;
     MsgVote(const Vote &);
@@ -60,7 +60,7 @@ struct MsgVote {
 };
 
 struct MsgReqBlock {
-    static const opcode_t opcode = 0x2;
+    static const opcode_t opcode = 0x3;
     DataStream serialized;
     std::vector<uint256_t> blk_hashes;
     MsgReqBlock() = default;
@@ -70,13 +70,65 @@ struct MsgReqBlock {
 
 
 struct MsgRespBlock {
-    static const opcode_t opcode = 0x3;
+    static const opcode_t opcode = 0x4;
     DataStream serialized;
     std::vector<block_t> blks;
     MsgRespBlock(const std::vector<block_t> &blks);
     MsgRespBlock(DataStream &&s): serialized(std::move(s)) {}
     void postponed_parse(HotStuffCore *hsc);
 };
+
+ 
+struct MsgConsensusReqCmd {
+    static const opcode_t opcode = 0x5;
+    DataStream serialized;
+    uint256_t commit_set_hash;
+    uint64_t stable_timestamp;
+    uint32_t stable_idx;
+    uint256_t place_holder1;
+    uint256_t place_holder2;
+    uint256_t place_holder3;
+    uint256_t place_holder4;
+    
+    SigSecp256k1 sig;
+
+    MsgConsensusReqCmd(){}
+
+    MsgConsensusReqCmd(const MsgConsensusReqCmd& other){
+        commit_set_hash = other.commit_set_hash;
+        stable_timestamp = other.stable_timestamp;
+        stable_idx = other.stable_idx;
+        place_holder1 = other.place_holder1;
+        place_holder2 = other.place_holder2;
+        place_holder3 = other.place_holder3;
+        place_holder4 = other.place_holder4;
+    }
+    
+    MsgConsensusReqCmd(const uint256_t &commit_set_hash, const uint64_t &stable_timestamp, const uint32_t &stable_idx, const uint256_t &place_holder1, const uint256_t &place_holder2, const uint256_t &place_holder3, const uint256_t &place_holder4);
+
+    MsgConsensusReqCmd(DataStream &&s): serialized(std::move(s)) {}
+
+    void postponed_parse();
+};
+
+struct MsgConsensusRespCmd {
+    static const opcode_t opcode = 0x6;
+    DataStream serialized;
+    uint256_t commit_set_hash;
+    uint256_t place_holder1;
+    uint256_t place_holder2;
+    uint256_t place_holder3;
+    uint256_t place_holder4;
+    
+    SigSecp256k1 sig;
+
+    MsgConsensusRespCmd(const uint256_t &commit_set_hash, const uint256_t &place_holder1, const uint256_t &place_holder2, const uint256_t &place_holder3, const uint256_t &place_holder4);
+
+    MsgConsensusRespCmd(DataStream &&s): serialized(std::move(s)) {}
+
+    void postponed_parse();
+};
+
 
 using promise::promise_t;
 
@@ -130,8 +182,26 @@ class HotStuffBase: public HotStuffCore {
     friend CmdFetchContext;
 
     public:
+    /** for Archipelago */
+    uint64_t stable_point;
+    uint32_t stable_point_idx;
+    uint32_t cmd_cnt;
+    uint32_t stable_period;
+    uint32_t liveness_delta;
+    uint32_t exec_count, exec_sent;
+    std::unordered_map<uint256_t,std::pair<uint32_t, uint32_t>> exec_client_rsp;
+
+    std::vector<std::pair<std::pair<uint256_t, uint64_t>, NetAddr>> commit_set;
+    std::vector<std::pair<uint64_t, uint32_t>> stable_point_errors;
+    static bool commit_set_cmp(const std::pair<std::pair<uint256_t, uint64_t>, NetAddr>&a, const std::pair<std::pair<uint256_t, uint64_t>, NetAddr>&b) {
+        return a.first.second < b.first.second;
+    }
+
     using Net = PeerNetwork<opcode_t>;
     using commit_cb_t = std::function<void(const Finality &)>;
+    using ordering1_cb_t = std::function<void(const Ordering1Finality &)>;
+    using ordering2_cb_t = std::function<void(const Ordering2Finality &)>;
+    using consensus_cb_t = std::function<void(const uint256_t &, const NetAddr&)>;
 
     protected:
     /** the binding address in replica network */
@@ -159,7 +229,16 @@ class HotStuffBase: public HotStuffCore {
     std::unordered_map<const uint256_t, BlockDeliveryContext> blk_delivery_waiting;
     std::unordered_map<const uint256_t, commit_cb_t> decision_waiting;
     using cmd_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, commit_cb_t>>;
+    using ordering1_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, ordering1_cb_t>>;
+    using ordering2_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, ordering2_cb_t>>;
+    using consensus_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint64_t, consensus_cb_t>>;
+    using consensus_nonleader_queue_t = salticidae::MPSCQueueEventDriven<MsgConsensusReqCmd>;
+
     cmd_queue_t cmd_pending;
+    ordering1_queue_t ordering1;
+    ordering2_queue_t ordering2;
+    consensus_queue_t consensus;
+    consensus_nonleader_queue_t consensus_nonleader;
     std::queue<uint256_t> cmd_pending_buffer;
 
     /* statistics */
@@ -206,6 +285,8 @@ class HotStuffBase: public HotStuffCore {
 
     public:
     HotStuffBase(uint32_t blk_size,
+                 uint32_t stable_period,
+                 uint32_t liveness_delta,
             ReplicaID rid,
             privkey_bt &&priv_key,
             NetAddr listen_addr,
@@ -220,6 +301,18 @@ class HotStuffBase: public HotStuffCore {
 
     /* Submit the command to be decided. */
     void exec_command(uint256_t cmd_hash, commit_cb_t callback);
+    void exec_ordering1(uint256_t cmd_hash, ordering1_cb_t callback);
+    void exec_ordering2(uint256_t cmd_hash, ordering2_cb_t callback);
+    void exec_consensus(uint64_t timestamp, consensus_cb_t callback);
+
+    void broadcast_start_consensus(const uint256_t& commit_set_hash, uint64_t stable_timestamp, uint32_t stable_idx, const uint256_t& cmd_hash1, const uint256_t& cmd_hash2, const uint256_t& cmd_hash3, const uint256_t& cmd_hash4);
+    void resp_start_consensus(const uint256_t &commit_set_hash, const uint256_t& cmd_hash1, const uint256_t& cmd_hash2, const uint256_t& cmd_hash3, const uint256_t& cmd_hash4, const PeerId);
+
+    std::unordered_set<uint256_t> leader_propose;
+    void server_consensus_request_cmd_handler(MsgConsensusReqCmd &&msg, const Net::conn_t &);
+    void server_consensus_reponse_cmd_handler(MsgConsensusRespCmd &&msg, const Net::conn_t &);
+    void check_stable_point_index(uint256_t commit_set_hash, uint64_t stable_timestamp, uint32_t stable_idx);
+    
     void start(std::vector<std::tuple<NetAddr, pubkey_bt, uint256_t>> &&replicas,
                 bool ec_loop = false);
 
@@ -277,6 +370,8 @@ class HotStuff: public HotStuffBase {
 
     public:
     HotStuff(uint32_t blk_size,
+             uint32_t stable_period,
+             uint32_t liveness_delta,
             ReplicaID rid,
             const bytearray_t &raw_privkey,
             NetAddr listen_addr,
@@ -285,6 +380,8 @@ class HotStuff: public HotStuffBase {
             size_t nworker = 4,
             const Net::Config &netconfig = Net::Config()):
         HotStuffBase(blk_size,
+                     stable_period,
+                     liveness_delta,
                     rid,
                     new PrivKeyType(raw_privkey),
                     listen_addr,
