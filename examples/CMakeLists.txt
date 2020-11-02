@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -W -Wall -Wextra -pedantic -Wsuggest-override -Wno-unused-result -DHOTSTUFF_ENABLE_BENCHMARK")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -W -Wall -Wextra -pedantic -Wsuggest-override -Wno-unused-result -DHOTSTUFF_ENABLE_BENCHMARK")
+
 add_executable(hotstuff-app hotstuff_app.cpp)
 target_link_libraries(hotstuff-app hotstuff_static)
 
