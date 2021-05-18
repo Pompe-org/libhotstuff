@@ -14,7 +14,8 @@ if __name__ == "__main__":
     parser.add_argument('--tls-keygen', type=str, default='./hotstuff-tls-keygen')
     parser.add_argument('--nodes', type=str, default='nodes.txt')
     parser.add_argument('--block-size', type=int, default=1)
-    parser.add_argument('--stable-period', type=int, default=40)
+    parser.add_argument('--stable-period', type=int, default=100)
+    parser.add_argument('--liveness-delta', type=int, default=50)
     parser.add_argument('--pace-maker', type=str, default='rr')
     args = parser.parse_args()
 
@@ -349,7 +350,10 @@ if __name__ == "__main__":
     if not (args.block_size is None):
         main_conf.write("block-size = {}\n".format(args.block_size))
     if not (args.stable_period is None):
-        main_conf.write("stable-period = {}\n".format(args.stable_period))        
+        main_conf.write("stable-period = {}\n".format(args.stable_period))
+    if not (args.liveness_delta is None):
+        main_conf.write("liveness-delta = {}\n".format(args.liveness_delta))
+        
     if not (args.pace_maker is None):
         main_conf.write("pace-maker = {}\n".format(args.pace_maker))
     for r in zip(replicas, keys, tls_keys, itertools.count(0)):
