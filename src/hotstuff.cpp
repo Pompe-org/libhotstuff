@@ -572,7 +572,7 @@ void HotStuffBase::start(
                 exec_command(msg.place_holder3, [this](Finality fin) {});
                 exec_command(msg.place_holder4, [this](Finality fin) {});
 
-                //return true;
+                return true;
             }
             return false;
         });
@@ -634,7 +634,7 @@ void HotStuffBase::start(
                  //cmd_noresp_pending.enqueue(cmd_hash4);
                  exec_command(cmd_hash4, [this](Finality fin) {});
 
-                 //return true;
+                 return true;
              }
              return false;
      });
@@ -673,7 +673,7 @@ void HotStuffBase::start(
                         on_propose(cmds, pmaker->get_parents());
                 });
 
-                //return true;
+                return true;
             }
         }
         return false;

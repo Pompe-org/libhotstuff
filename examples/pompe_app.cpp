@@ -416,6 +416,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             } catch (std::exception &err) {
                 HOTSTUFF_LOG_WARN("unable to send MsgRespCmd to the client: %s", err.what());
             }
+            return true;
         }
         return false;
     });
@@ -429,6 +430,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             } catch (std::exception &err) {
                 HOTSTUFF_LOG_WARN("unable to send MsgOrdering1RespCmd to the client: %s", err.what());
             }
+            return true;
         }
         return false;
     });
@@ -442,6 +444,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             } catch (std::exception &err) {
                 HOTSTUFF_LOG_WARN("unable to send MsgOrdering2RespCmd to the client: %s", err.what());
             }
+            return true;
         }
         return false;
     });
@@ -455,6 +458,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
                     } catch (std::exception &err) {
                         HOTSTUFF_LOG_WARN("unable to send MsgConsensusRespClientCmd to the client: %s", err.what());
                     }
+                    return true;
                 }
             return false;
     });
