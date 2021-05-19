@@ -70,6 +70,8 @@ struct Request {
 
 int BATCH_SIZE;
 int count_order, count_exec;
+int count_backoff, total_backoff;
+struct timespec last_exec_resp_ts;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
@@ -182,11 +184,37 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
 #endif
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
-    while (try_send());
+
+    // slowdown if waiting too long for the consensus phase
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    uint64_t now_clock_us = now.tv_sec;
+    now_clock_us *= 1000 * 1000;
+    now_clock_us += now.tv_nsec/1000;
+
+    uint64_t last_clock_us = last_exec_resp_ts.tv_sec;
+    last_clock_us *= 1000 * 1000;
+    last_clock_us += last_exec_resp_ts.tv_nsec / 1000;
+
+    const int ONE_SEC = 1000000;
+    if (now_clock_us - last_clock_us < ONE_SEC * 3) {
+        // last consensus response less than 1sec ago
+        count_backoff = 0;
+        while (try_send());
+    } else {
+        // slowdown the speed of sending requests
+        count_backoff++;
+        total_backoff++;
+        usleep(ONE_SEC * (1 << count_backoff));
+        clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
+        while (try_send());
+    }
 }
 
 
 void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Net::conn_t &) {
+    clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
+
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting_exec.find(cmd_hash);
@@ -212,6 +240,7 @@ void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Ne
     //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), "303030000");
 #endif
     waiting_exec.erase(it);
+
 }
 
 
@@ -285,9 +314,10 @@ int main(int argc, char **argv) {
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
+    printf("client backoff %d times\n", total_backoff);
     printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-
+    
     freopen(execlogfile.c_str(), "w", stdout);
 
     for (const auto &e: elapsed_exec)
