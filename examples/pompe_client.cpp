@@ -68,8 +68,8 @@ struct Request {
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
 };
 
-int BATCH_SIZE;
 int count_order, count_exec;
+int BATCH_SIZE, STABLE_PERIOD;
 int count_backoff, total_backoff;
 struct timespec last_exec_resp_ts;
 using Net = salticidae::MsgNetwork<opcode_t>;
@@ -197,7 +197,7 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     last_clock_us += last_exec_resp_ts.tv_nsec / 1000;
 
     const int ONE_SEC = 1000000;
-    if (now_clock_us - last_clock_us < ONE_SEC * 3) {
+    if (last_clock_us == 0 || now_clock_us - last_clock_us < std::max(ONE_SEC * 5, STABLE_PERIOD * 30)) {
         // last consensus response less than 1sec ago
         count_backoff = 0;
         while (try_send());
@@ -205,7 +205,8 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
         // slowdown the speed of sending requests
         count_backoff++;
         total_backoff++;
-        usleep(ONE_SEC * (1 << count_backoff));
+        usleep(ONE_SEC * 3);
+        // usleep(ONE_SEC * (1 << count_backoff));
         clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
         while (try_send());
     }
@@ -257,6 +258,7 @@ int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
 
     auto opt_blk_size = Config::OptValInt::create(1);
+    auto opt_stable_period = Config::OptValInt::create(50);
     auto opt_idx = Config::OptValInt::create(0);
     auto opt_replicas = Config::OptValStrVec::create();
     auto opt_max_iter_num = Config::OptValInt::create(100);
@@ -276,6 +278,7 @@ int main(int argc, char **argv) {
     mn.start();
 
     config.add_opt("block-size", opt_blk_size, Config::SET_VAL);
+    config.add_opt("stable-period", opt_stable_period, Config::SET_VAL);
     config.add_opt("idx", opt_idx, Config::SET_VAL);
     config.add_opt("cid", opt_cid, Config::SET_VAL);
     config.add_opt("replica", opt_replicas, Config::APPEND);
@@ -284,6 +287,7 @@ int main(int argc, char **argv) {
     config.parse(argc, argv);
 
     BATCH_SIZE = opt_blk_size->get();
+    STABLE_PERIOD = opt_stable_period->get() * 1000;
     auto idx = opt_idx->get();
     max_iter_num = opt_max_iter_num->get();
     max_async_num = opt_max_async_num->get();
