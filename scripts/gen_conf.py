@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
 
     if args.ips is None:
-        ips = ['127.0.0.1']
+        ips = ['host0', 'host1', 'host2', 'host3']
     else:
         ips = [l.strip() for l in open(args.ips, 'r').readlines()]
     prefix = args.prefix
