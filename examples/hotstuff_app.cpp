@@ -112,10 +112,8 @@ class HotStuffApp: public HotStuff {
 #endif
     }
 
-#ifdef HOTSTUFF_MSG_STAT
     std::unordered_set<conn_t> client_conns;
     void print_stat() const;
-#endif
 
     public:
     HotStuffApp(uint32_t blk_size,
@@ -145,7 +143,8 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 salticidae::BoxObj<HotStuffApp> papp = nullptr;
 
 int main(int argc, char **argv) {
-    Config config("hotstuff.conf");
+    Config config(argv[1]);
+    //Config config("hotstuff.conf");
 
     ElapsedTime elapsed;
     elapsed.start();
