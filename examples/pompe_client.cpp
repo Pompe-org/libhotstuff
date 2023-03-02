@@ -261,8 +261,8 @@ int main(int argc, char **argv) {
     auto opt_stable_period = Config::OptValInt::create(50);
     auto opt_idx = Config::OptValInt::create(0);
     auto opt_replicas = Config::OptValStrVec::create();
-    auto opt_max_iter_num = Config::OptValInt::create(100);
-    auto opt_max_async_num = Config::OptValInt::create(10);
+    auto opt_max_iter_num = Config::OptValInt::create(-1);
+    auto opt_max_async_num = Config::OptValInt::create(4);
     auto opt_cid = Config::OptValInt::create(-1);
 
     auto shutdown = [&](int) { ec.stop(); };

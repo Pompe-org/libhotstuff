@@ -206,7 +206,7 @@ std::vector<NetAddr> ledger_replicas;
 
 int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
-    //std::string logfile(argv[2]);
+    std::string logfile(argv[2]);
     //std::string ledger_config(argv[3]);
     Config config(argv[1]);
 
@@ -367,8 +367,8 @@ int main(int argc, char **argv) {
     papp->start(reps);
     elapsed.stop(true);
 
-    //printf("server%d write to log file %s\n", idx, logfile.c_str());
-    //freopen(logfile.c_str(), "w", stdout);
+    printf("server%d write to log file %s\n", idx, logfile.c_str());
+    freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
 
