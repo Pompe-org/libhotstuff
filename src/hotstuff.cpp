@@ -570,7 +570,7 @@ void HotStuffBase::start(
                 if (msg.stable_idx < 500) {
                     DataStream s;
                     s << msg.commit_set_hash;
-                    printf("    [DEBUG] exec_command for %d, 0x%s", msg.stable_idx, s.get_hex().c_str());
+                    printf("    [DEBUG] exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
                 }
                 exec_command(msg.commit_set_hash, [this](Finality fin) {});
                 exec_command(msg.place_holder2, [this](Finality fin) {});
