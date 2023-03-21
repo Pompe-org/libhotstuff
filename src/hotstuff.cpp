@@ -645,7 +645,8 @@ void HotStuffBase::start(
                  if (next_stable_point_idx < 500) {
                      DataStream s;
                      s << commit_set_hash;
-                     printf("[DEBUG] consensus invoked %d times, %d->%d, 0x%s\n", debug_invoked++, start, end, s.get_hex().c_str());
+                     //printf("[DEBUG] exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
+                     printf("[DEBUG] consensus#%d for %d, 0x%s\n", debug_invoked++, s.get_hex().c_str());
                  }
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
