@@ -212,12 +212,12 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     }
 }
 
-static int debug_exec_resp = 0;
+static int debug_client_exec_resp = 0;
 void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Net::conn_t &) {
     clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
 
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
-    debug_exec_resp++;
+    debug_client_exec_resp++;
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting_exec.find(cmd_hash);
     if (it == waiting_exec.end()) return;    
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
     printf("client backoff %d times\n", total_backoff);
     printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-    printf("[DEBUG] debug_exec_resp = %d\n", debug_exec_resp);
+    printf("[DEBUG] debug_client_exec_resp = %d\n", debug_client_exec_resp);
     
     freopen(execlogfile.c_str(), "w", stdout);
 

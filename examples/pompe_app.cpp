@@ -204,6 +204,7 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 salticidae::BoxObj<HotStuffApp> papp = nullptr;
 std::vector<NetAddr> ledger_replicas;
 
+static int debug_server_exec_resp = 0;
 int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
     std::string logfile(argv[2]);
@@ -368,6 +369,7 @@ int main(int argc, char **argv) {
     elapsed.stop(true);
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
+    printf("[DEBUG] server%d send %d exec response\n", idx, debug_server_exec_resp);
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
@@ -454,6 +456,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             while (q.try_dequeue(p))
                 {
                     try {
+                        debug_server_exec_resp++;
                         cn.send_msg(MsgConsensusRespClientCmd(p.first), p.second);
                     } catch (std::exception &err) {
                         HOTSTUFF_LOG_WARN("unable to send MsgConsensusRespClientCmd to the client: %s", err.what());
