@@ -207,6 +207,7 @@ std::vector<NetAddr> ledger_replicas;
 static int debug_timer_trigger = 0;
 static int debug_timer_callback_trigger = 0;
 static int debug_timer_callback_nresponse = 0;
+static int debug_pending_consensus_resp_ninsert = 0;
 static int debug_server_exec_resp = 0;
 int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
@@ -373,7 +374,7 @@ int main(int argc, char **argv) {
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
     if (debug_timer_trigger > 0)
-        printf("[DEBUG] server%d send %d exec response, timer triggered %d times, callback %d times sending %d responses\n", idx, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger, debug_timer_callback_nresponse);
+        printf("[DEBUG] server%d send %d exec response; timer triggered %d times, callback %d times sending %d responses; insert %d entries to pending_consensus_resp\n", idx, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger, debug_timer_callback_nresponse, debug_pending_consensus_resp_ninsert);
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
@@ -530,6 +531,7 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
     // add to local commit set
     commit_set.push_back(std::make_pair(std::make_pair(cmd_hash, timestamp), addr));
     // add to the set of pending consensus response
+    debug_pending_consensus_resp_ninsert++;
     pending_consensus_resp.push_back(std::make_pair(cmd_hash, addr));
 
     //HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
