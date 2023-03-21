@@ -1,6 +1,6 @@
 [submodule "secp256k1"]
 	path = secp256k1
-	url = https://github.com/bitcoin-core/secp256k1
+	url = https://github.com/Pompe-org/secp256k1.git
 [submodule "salticidae"]
 	path = salticidae
 	url = https://github.com/yhzhang0128/salticidae.git
