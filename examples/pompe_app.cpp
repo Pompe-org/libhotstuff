@@ -530,7 +530,8 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
 
     // add to local commit set
     commit_set.push_back(std::make_pair(std::make_pair(cmd_hash, timestamp), addr));
-    // add to the set of pending consensus response
+    // add to the set of pending consensus response    
+    std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
     debug_pending_consensus_resp_ninsert++;
     pending_consensus_resp.push_back(std::make_pair(cmd_hash, addr));
 
@@ -561,6 +562,7 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
         // stable_period milliseconds have passed on timer
         exec_last_batch_clock = curr_clock_us;
         exec_consensus(curr_clock_us, [this](uint256_t cmd_hash, NetAddr addr) {
+            std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
             debug_timer_callback_trigger++;
             debug_timer_callback_nresponse += pending_consensus_resp.size();
             for (auto &p: pending_consensus_resp)

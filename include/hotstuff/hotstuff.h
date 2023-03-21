@@ -191,6 +191,7 @@ class HotStuffBase: public HotStuffCore {
     uint32_t exec_count, exec_sent;
     std::unordered_map<uint256_t,std::pair<uint32_t, uint32_t>> exec_client_rsp;
 
+    std::mutex pending_consensus_resp_mutex;
     std::vector<std::pair<uint256_t, NetAddr>> pending_consensus_resp;
     std::vector<std::pair<std::pair<uint256_t, uint64_t>, NetAddr>> commit_set;
     std::vector<std::pair<uint64_t, uint32_t>> stable_point_errors;
