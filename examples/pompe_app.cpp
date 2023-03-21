@@ -535,11 +535,11 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
     debug_pending_consensus_resp_ninsert++;
     pending_consensus_resp.push_back(std::make_pair(cmd_hash, addr));
 
-    consensus_queue.enqueue(std::make_pair(cmd_hash, addr));
-
     //HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
     exec_ordering2(cmd_hash, [this, addr](Ordering2Finality fin) {
             ordering2_queue.enqueue(std::make_pair(fin, addr));
+            // below for debugging purpose
+            consensus_queue.enqueue(std::make_pair(fin.cmd_hash, addr));
     });
 
     // only a single leader starts the consensus phase
