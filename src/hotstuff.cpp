@@ -567,26 +567,29 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
-                auto cmd_hash1 = CommandDummy(0, cmd_cnt++).get_hash();
-                auto cmd_hash2 = CommandDummy(1, cmd_cnt++).get_hash();
-                auto cmd_hash3 = CommandDummy(2, cmd_cnt++).get_hash();        
-                auto cmd_hash4 = CommandDummy(3, cmd_cnt++).get_hash();
-                auto commit_set_hash = CommandDummy(4, cmd_cnt++).get_hash();
-
-                // there seems to be a bug with msg serialization/deserialization
-                // exec_command(msg.commit_set_hash, [this](Finality fin) {});
-                // exec_command(msg.place_holder2, [this](Finality fin) {});
-                // exec_command(msg.place_holder3, [this](Finality fin) {});
-                // exec_command(msg.place_holder4, [this](Finality fin) {});
+                if (msg.stable_idx < 500) {
+                    DataStream s;
+                    s << msg.commit_set_hash;
+                    printf("    [DEBUG] exec_command for %d, 0x%s", msg.stable_idx, s.get_hex().c_str());
+                }
+                exec_command(msg.commit_set_hash, [this](Finality fin) {});
+                exec_command(msg.place_holder2, [this](Finality fin) {});
+                exec_command(msg.place_holder3, [this](Finality fin) {});
+                exec_command(msg.place_holder4, [this](Finality fin) {});
 
                 // try to keep the hash values *same* as the leader
                 // by running the same code for cmd_hash* and commit_set_hash
-                if (msg.stable_idx < 500)
-                    printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, commit_set_hash);
-                exec_command(commit_set_hash, [this](Finality fin) {});
-                exec_command(cmd_hash2, [this](Finality fin) {});
-                exec_command(cmd_hash3, [this](Finality fin) {});
-                exec_command(cmd_hash4, [this](Finality fin) {});
+
+                // auto cmd_hash1 = CommandDummy(0, cmd_cnt++).get_hash();
+                // auto cmd_hash2 = CommandDummy(1, cmd_cnt++).get_hash();
+                // auto cmd_hash3 = CommandDummy(2, cmd_cnt++).get_hash();        
+                // auto cmd_hash4 = CommandDummy(3, cmd_cnt++).get_hash();
+                // auto commit_set_hash = CommandDummy(4, cmd_cnt++).get_hash();
+
+                // exec_command(commit_set_hash, [this](Finality fin) {});
+                // exec_command(cmd_hash2, [this](Finality fin) {});
+                // exec_command(cmd_hash3, [this](Finality fin) {});
+                // exec_command(cmd_hash4, [this](Finality fin) {});
 
                 return true;
             }
@@ -639,7 +642,11 @@ void HotStuffBase::start(
                  //     debug_hashes.insert(cmd_hash4);
                  // }
                  static int debug_invoked = 0;
-                 printf("[DEBUG] consensus invoked %d times, %d->%d, 0x%x\n", debug_invoked++, start, end, commit_set_hash);
+                 if (next_stable_point_idx < 500) {
+                     DataStream s;
+                     s << commit_set_hash;
+                     printf("[DEBUG] consensus invoked %d times, %d->%d, 0x%s\n", debug_invoked++, start, end, s.get_hex().c_str());
+                 }
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
                          uint32_t end = exec_client_rsp[commit_set_hash].second;
