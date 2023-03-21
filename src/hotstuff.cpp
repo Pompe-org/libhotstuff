@@ -567,11 +567,21 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
-                printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, msg.commit_set_hash);
-                exec_command(msg.commit_set_hash, [this](Finality fin) {});
-                exec_command(msg.place_holder2, [this](Finality fin) {});
-                exec_command(msg.place_holder3, [this](Finality fin) {});
-                exec_command(msg.place_holder4, [this](Finality fin) {});
+                //printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, msg.commit_set_hash);
+                auto cmd_hash1 = CommandDummy(0, cmd_cnt++).get_hash();
+                auto cmd_hash2 = CommandDummy(1, cmd_cnt++).get_hash();
+                auto cmd_hash3 = CommandDummy(2, cmd_cnt++).get_hash();        
+                auto cmd_hash4 = CommandDummy(3, cmd_cnt++).get_hash();
+                auto commit_set_hash = CommandDummy(4, cmd_cnt++).get_hash();
+
+                exec_command(commit_set_hash, [this](Finality fin) {});
+                exec_command(cmd_hash2, [this](Finality fin) {});
+                exec_command(cmd_hash3, [this](Finality fin) {});
+                exec_command(cmd_hash4, [this](Finality fin) {});
+                // exec_command(msg.commit_set_hash, [this](Finality fin) {});
+                // exec_command(msg.place_holder2, [this](Finality fin) {});
+                // exec_command(msg.place_holder3, [this](Finality fin) {});
+                // exec_command(msg.place_holder4, [this](Finality fin) {});
 
                 return true;
             }
