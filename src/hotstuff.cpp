@@ -613,6 +613,8 @@ void HotStuffBase::start(
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
                          uint32_t end = exec_client_rsp[commit_set_hash].second;
 
+                         printf("[DEBUG] consensus response [%d, %d)\n", start, end);
+
                          for (uint32_t i = start; i < end; i++) {
                              e.second(commit_set[i].first.first, commit_set[i].second);
                          }

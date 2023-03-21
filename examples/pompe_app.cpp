@@ -568,11 +568,11 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
         exec_consensus(curr_clock_us, [this](uint256_t cmd_hash, NetAddr addr) {
             debug_timer_callback_trigger++;
 
-            std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
-            debug_timer_callback_nresponse += pending_consensus_resp.size();
-            //consensus_queue.enqueue(std::make_pair(cmd_hash, addr));
-            for (auto &p: pending_consensus_resp)
-                consensus_queue.enqueue(p);
+            // std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
+            // debug_timer_callback_nresponse += pending_consensus_resp.size();
+            consensus_queue.enqueue(std::make_pair(cmd_hash, addr));
+            // for (auto &p: pending_consensus_resp)
+            //     consensus_queue.enqueue(p);
             pending_consensus_resp.clear();
         });
     }
