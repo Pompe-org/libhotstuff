@@ -370,9 +370,7 @@ int main(int argc, char **argv) {
     elapsed.stop(true);
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
-    if (debug_server_exec_resp) {
-        printf("[DEBUG] server%d send %d exec response, timer triggered %d times\n", idx, debug_server_exec_resp, debug_timer_trigger);
-    }
+    printf("[DEBUG] server%d send %d exec response, timer triggered %d times\n", idx, debug_server_exec_resp, debug_timer_trigger);
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
