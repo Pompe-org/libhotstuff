@@ -581,7 +581,8 @@ void HotStuffBase::start(
 
                 // try to keep the hash values *same* as the leader
                 // by running the same code for cmd_hash* and commit_set_hash
-                printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, commit_set_hash);
+                if (msg.stable_idx < 500)
+                    printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, commit_set_hash);
                 exec_command(commit_set_hash, [this](Finality fin) {});
                 exec_command(cmd_hash2, [this](Finality fin) {});
                 exec_command(cmd_hash3, [this](Finality fin) {});
