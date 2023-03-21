@@ -559,6 +559,7 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
         exec_last_batch_clock = curr_clock_us;
         exec_consensus(curr_clock_us, [this](uint256_t cmd_hash, NetAddr addr) {
             debug_timer_callback_trigger++;
+            printf("[DEBUG] send %d exec responses\n", pending_consensus_resp.size());
             for (auto &p: pending_consensus_resp)
                 consensus_queue.enqueue(p);
                 //consensus_queue.enqueue(std::make_pair(cmd_hash, addr));
