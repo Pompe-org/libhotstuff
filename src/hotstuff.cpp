@@ -609,8 +609,21 @@ void HotStuffBase::start(
                  exec_client_rsp[commit_set_hash] = std::make_pair(start, end);
                  exec_sent = end;
 
-                 static int invoked = 0;
-                 printf("[DEBUG] consensus invoked %d times, %d->%d\n", invoked++, start, end);
+                 static int debug_invoked = 0;
+                 static std::set<uint256_t> debug_hashes;
+                 if (debug_hashes.count(commit_set_hash)
+                     || debug_hashes.count(cmd_hash2)
+                     || debug_hashes.count(cmd_hash3)
+                     || debug_hashes.count(cmd_hash4)) {
+                     printf("[ERROR] [ERROR] [ERROR] hash duplicates\n");
+                     assert(false);
+                 } else {
+                     debug_hashes.insert(commit_set_hash);
+                     debug_hashes.insert(cmd_hash2);
+                     debug_hashes.insert(cmd_hash3);
+                     debug_hashes.insert(cmd_hash4);
+                 }
+                 printf("[DEBUG] consensus invoked %d times, %d->%d\n", debug_invoked++, start, end);
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
                          uint32_t end = exec_client_rsp[commit_set_hash].second;
