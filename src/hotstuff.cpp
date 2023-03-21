@@ -609,6 +609,8 @@ void HotStuffBase::start(
                  exec_client_rsp[commit_set_hash] = std::make_pair(start, end);
                  exec_sent = end;
 
+                 static int invoked = 0;
+                 printf("[DEBUG] consensus invoked %d times\n", invoked++);
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
                          uint32_t end = exec_client_rsp[commit_set_hash].second;
