@@ -567,7 +567,7 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
-                printf("    [DEBUG] exec_command for %d\n", msg.stable_idx);
+                printf("    [DEBUG] exec_command for %d, 0x%x\n", msg.stable_idx, msg.commit_set_hash);
                 exec_command(msg.commit_set_hash, [this](Finality fin) {});
                 exec_command(msg.place_holder2, [this](Finality fin) {});
                 exec_command(msg.place_holder3, [this](Finality fin) {});
@@ -624,7 +624,7 @@ void HotStuffBase::start(
                  //     debug_hashes.insert(cmd_hash4);
                  // }
                  static int debug_invoked = 0;
-                 printf("[DEBUG] consensus invoked %d times, %d->%d\n", debug_invoked++, start, end);
+                 printf("[DEBUG] consensus invoked %d times, %d->%d, 0x%x\n", debug_invoked++, start, end, commit_set_hash);
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
                          uint32_t end = exec_client_rsp[commit_set_hash].second;
