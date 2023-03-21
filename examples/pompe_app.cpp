@@ -204,6 +204,7 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 salticidae::BoxObj<HotStuffApp> papp = nullptr;
 std::vector<NetAddr> ledger_replicas;
 
+static int debug_timer_trigger = 0;
 static int debug_server_exec_resp = 0;
 int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
@@ -369,7 +370,9 @@ int main(int argc, char **argv) {
     elapsed.stop(true);
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
-    printf("[DEBUG] server%d send %d exec response\n", idx, debug_server_exec_resp);
+    if (debug_server_exec_resp) {
+        printf("[DEBUG] server%d send %d exec response, timer triggered %d times\n", idx, debug_server_exec_resp, debug_timer_trigger);
+    }
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
@@ -550,6 +553,8 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
         // start the timer for the first time
         exec_last_batch_clock = curr_clock_us;
     } else if (exec_last_batch_clock + stable_period * 1000 < curr_clock_us) {
+        debug_timer_trigger++;
+
         // stable_period milliseconds have passed on timer
         exec_last_batch_clock = curr_clock_us;
         exec_consensus(curr_clock_us, [this](uint256_t cmd_hash, NetAddr addr) {
