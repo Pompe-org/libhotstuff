@@ -567,6 +567,7 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
+                printf("    [DEBUG] exec_command for %d\n", msg.stable_idx);
                 exec_command(msg.commit_set_hash, [this](Finality fin) {});
                 exec_command(msg.place_holder2, [this](Finality fin) {});
                 exec_command(msg.place_holder3, [this](Finality fin) {});
@@ -609,20 +610,20 @@ void HotStuffBase::start(
                  exec_client_rsp[commit_set_hash] = std::make_pair(start, end);
                  exec_sent = end;
 
+                 // static std::set<uint256_t> debug_hashes;
+                 // if (debug_hashes.count(commit_set_hash)
+                 //     || debug_hashes.count(cmd_hash2)
+                 //     || debug_hashes.count(cmd_hash3)
+                 //     || debug_hashes.count(cmd_hash4)) {
+                 //     printf("[ERROR] [ERROR] [ERROR] hash duplicates\n");
+                 //     assert(false);
+                 // } else {
+                 //     debug_hashes.insert(commit_set_hash);
+                 //     debug_hashes.insert(cmd_hash2);
+                 //     debug_hashes.insert(cmd_hash3);
+                 //     debug_hashes.insert(cmd_hash4);
+                 // }
                  static int debug_invoked = 0;
-                 static std::set<uint256_t> debug_hashes;
-                 if (debug_hashes.count(commit_set_hash)
-                     || debug_hashes.count(cmd_hash2)
-                     || debug_hashes.count(cmd_hash3)
-                     || debug_hashes.count(cmd_hash4)) {
-                     printf("[ERROR] [ERROR] [ERROR] hash duplicates\n");
-                     assert(false);
-                 } else {
-                     debug_hashes.insert(commit_set_hash);
-                     debug_hashes.insert(cmd_hash2);
-                     debug_hashes.insert(cmd_hash3);
-                     debug_hashes.insert(cmd_hash4);
-                 }
                  printf("[DEBUG] consensus invoked %d times, %d->%d\n", debug_invoked++, start, end);
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                          uint32_t start = exec_client_rsp[commit_set_hash].first;
