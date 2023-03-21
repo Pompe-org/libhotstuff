@@ -169,6 +169,8 @@ int main(int argc, char **argv) {
     while (try_send());
     ec.dispatch();
 
+    printf("client%d executed %lu commands\n", idx, elapsed.size());
+
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
     for (const auto &e: elapsed)
     {
