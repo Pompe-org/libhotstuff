@@ -592,10 +592,10 @@ void HotStuffBase::start(
              while (q.try_dequeue(e)) {
                  // the pipeline design of HotStuff requires 4 commands to be issued at the same time for the first command to commit -- the following definitions are place-holder commands pushing the actual consensus command in the protocol to commit.
                  cmd_cnt++;
-                 auto cmd_hash1 = CommandDummy(0, cmd_cnt).get_hash();
-                 auto cmd_hash2 = CommandDummy(1, cmd_cnt).get_hash();
-                 auto cmd_hash3 = CommandDummy(2, cmd_cnt).get_hash();        
-                 auto cmd_hash4 = CommandDummy(3, cmd_cnt).get_hash();
+                 auto cmd_hash1 = CommandDummy(100, cmd_cnt).get_hash();
+                 auto cmd_hash2 = CommandDummy(101, cmd_cnt).get_hash();
+                 auto cmd_hash3 = CommandDummy(102, cmd_cnt).get_hash();
+                 auto cmd_hash4 = CommandDummy(103, cmd_cnt).get_hash();
 
                  uint32_t commit_set_size = commit_set.size();
                  std::sort(commit_set.begin() + stable_point_idx, commit_set.end(), commit_set_cmp);
@@ -611,7 +611,7 @@ void HotStuffBase::start(
                  stable_point_idx = next_stable_point_idx;
 
                  // a dummy implementation that only checks the time interval of the batch and the number of commands in the batch
-                 auto commit_set_hash = CommandDummy(4, cmd_cnt).get_hash();
+                 auto commit_set_hash = CommandDummy(104, cmd_cnt).get_hash();
                  // send the consensus request to other servers
                  broadcast_start_consensus(commit_set_hash, batch_end_timestamp, next_stable_point_idx, cmd_hash1, cmd_hash2, cmd_hash3, cmd_hash4);
 
