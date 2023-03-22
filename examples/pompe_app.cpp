@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
     if (debug_timer_trigger > 0)
-        printf("[DEBUG] server%d send %d exec response; timer triggered %d times, callback %d times sending %d responses; insert %d entries to pending_consensus_resp\n", idx, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger, debug_timer_callback_nresponse, debug_pending_consensus_resp_ninsert);
+        printf("[DEBUG] server%d send %d exec response; timer triggered %d times, callback %d times; insert %d entries to pending_consensus_resp\n", idx, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger, debug_pending_consensus_resp_ninsert);
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();

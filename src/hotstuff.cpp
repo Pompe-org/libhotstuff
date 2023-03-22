@@ -617,7 +617,7 @@ void HotStuffBase::start(
                  exec_client_rsp[commit_set_hash] = std::make_pair(start, end);
                  exec_sent = end;
 
-                 static int debug_invoked = 0;
+                 static int debug_invoked = 1;
                  // if (next_stable_point_idx < 500) {
                  //     DataStream s1, s2, s3, s4;
                  //     s1 << commit_set_hash;
@@ -626,11 +626,14 @@ void HotStuffBase::start(
                  //     s4 << cmd_hash4;
                  //     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                  // }
+                 printf("[DEBUG] consensus %d start\n", debug_invoked);
+                 debug_invoked += 4;
+
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                     printf("[DEBUG] consensus leader %d -> [%d, %d)\n", fin.cmd_height, start, end);
+                     printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
 
                      for (uint32_t i = start; i < end; i++) {
                          e.second(commit_set[i].first.first, commit_set[i].second);
