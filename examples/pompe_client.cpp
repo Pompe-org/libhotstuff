@@ -85,10 +85,7 @@ void connect_all() {
         conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
 }
 
-static int debug_limit = 0;
 bool try_send(bool check = true) {
-    if (debug_limit++ > 1000) return false;
-
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         auto cmd = new CommandDummy(cid, cnt++);

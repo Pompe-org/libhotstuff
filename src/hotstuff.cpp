@@ -673,7 +673,7 @@ void HotStuffBase::start(
             if (decision_made.count(cmd_hash)) {
                 uint32_t height = decision_made[cmd_hash];
                 e.second(Finality(id, 0, 0, height, cmd_hash, uint256_t()));
-                return true;
+                continue;
             }
         
             if (it == decision_waiting.end())
