@@ -390,7 +390,6 @@ class PMRoundRobinProposer: virtual public PaceMaker {
     promise_t beat() override {
         if (!rotating && proposer == hsc->get_id())
         {
-            printf("[DEBUG] got here in beat()\n");
             promise_t pm;
             pending_beats.push(pm);
             proposer_schedule_next();
