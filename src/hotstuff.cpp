@@ -572,7 +572,7 @@ void HotStuffBase::start(
                     s << msg.commit_set_hash;
                     printf("    [DEBUG] exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
                 }
-                exec_command(msg.commit_set_hash, [this](Finality fin) {});
+                exec_command(msg.commit_set_hash, [this](Finality fin) { printf("[DEBUG] non-leader height: %d\n", fin.cmd_height); });
                 exec_command(msg.place_holder2, [this](Finality fin) {});
                 exec_command(msg.place_holder3, [this](Finality fin) {});
                 exec_command(msg.place_holder4, [this](Finality fin) {});
@@ -648,31 +648,32 @@ void HotStuffBase::start(
                      printf("[DEBUG] consensus#%d, %d->%d, 0x%s\n", debug_invoked++, start, end, s.get_hex().c_str());
                  }
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
-                         uint32_t start = exec_client_rsp[commit_set_hash].first;
-                         uint32_t end = exec_client_rsp[commit_set_hash].second;
+                     printf("[DEBUG] height: %d\n", fin.cmd_height);
+                     uint32_t start = exec_client_rsp[commit_set_hash].first;
+                     uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                         printf("[DEBUG] consensus response [%d, %d)\n", start, end);
+                     printf("[DEBUG] consensus response [%d, %d)\n", start, end);
 
-                         for (uint32_t i = start; i < end; i++) {
-                             e.second(commit_set[i].first.first, commit_set[i].second);
-                         }
+                     for (uint32_t i = start; i < end; i++) {
+                         e.second(commit_set[i].first.first, commit_set[i].second);
+                     }
 
-                         if (exec_count < end)
-                             exec_count = end;
-                     });
+                     if (exec_count < end)
+                         exec_count = end;
+                 });
 
                  // place-holder cmd2
                  //exec_command_noresp(cmd_hash2);
                  //cmd_noresp_pending.enqueue(cmd_hash2);
-                 exec_command(cmd_hash2, [this](Finality fin) {});
+                 exec_command(cmd_hash2, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
                  // place-holder cmd3
                  //exec_command_noresp(cmd_hash3);
                  //cmd_noresp_pending.enqueue(cmd_hash3);
-                 exec_command(cmd_hash3, [this](Finality fin) {});
+                 exec_command(cmd_hash3, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
                  // place-holder cmd4
                  //exec_command_noresp(cmd_hash4);
                  //cmd_noresp_pending.enqueue(cmd_hash4);
-                 exec_command(cmd_hash4, [this](Finality fin) {});
+                 exec_command(cmd_hash4, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
 
                  return true;
              }
