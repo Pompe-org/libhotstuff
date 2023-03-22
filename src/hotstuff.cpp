@@ -567,15 +567,15 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
-                if (msg.stable_idx < 500) {
-                    DataStream s1, s2, s3, s4;
-                    s1 << msg.commit_set_hash;
-                    s2 << msg.place_holder2;
-                    s3 << msg.place_holder3;
-                    s4 << msg.place_holder4;
-                    printf("    [DEBUG] exec_command for %d, 0x%s, %s, %s, %s\n", msg.stable_idx, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
-                }
-                exec_command(msg.commit_set_hash, [this](Finality fin) { printf("[DEBUG] non-leader height: %d\n", fin.cmd_height); });
+                // if (msg.stable_idx < 500) {
+                //     DataStream s1, s2, s3, s4;
+                //     s1 << msg.commit_set_hash;
+                //     s2 << msg.place_holder2;
+                //     s3 << msg.place_holder3;
+                //     s4 << msg.place_holder4;
+                //     printf("    [DEBUG] exec_command for %d, 0x%s, %s, %s, %s\n", msg.stable_idx, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
+                // }
+                exec_command(msg.commit_set_hash, [this](Finality fin) {});
                 exec_command(msg.place_holder2, [this](Finality fin) {});
                 exec_command(msg.place_holder3, [this](Finality fin) {});
                 exec_command(msg.place_holder4, [this](Finality fin) {});
@@ -645,20 +645,19 @@ void HotStuffBase::start(
                  //     debug_hashes.insert(cmd_hash4);
                  // }
                  static int debug_invoked = 0;
-                 if (next_stable_point_idx < 500) {
-                     DataStream s1, s2, s3, s4;
-                     s1 << commit_set_hash;
-                     s2 << cmd_hash2;
-                     s3 << cmd_hash3;
-                     s4 << cmd_hash4;
-                     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
-                 }
+                 // if (next_stable_point_idx < 500) {
+                 //     DataStream s1, s2, s3, s4;
+                 //     s1 << commit_set_hash;
+                 //     s2 << cmd_hash2;
+                 //     s3 << cmd_hash3;
+                 //     s4 << cmd_hash4;
+                 //     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
+                 // }
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
-                     printf("[DEBUG] height: %d\n", fin.cmd_height);
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                     printf("[DEBUG] consensus response [%d, %d)\n", start, end);
+                     printf("[DEBUG] consensus response %d -> [%d, %d)\n", fin.cmd_height, start, end);
 
                      for (uint32_t i = start; i < end; i++) {
                          e.second(commit_set[i].first.first, commit_set[i].second);
@@ -671,15 +670,15 @@ void HotStuffBase::start(
                  // place-holder cmd2
                  //exec_command_noresp(cmd_hash2);
                  //cmd_noresp_pending.enqueue(cmd_hash2);
-                 exec_command(cmd_hash2, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
+                 exec_command(cmd_hash2, [this](Finality fin) {});
                  // place-holder cmd3
                  //exec_command_noresp(cmd_hash3);
                  //cmd_noresp_pending.enqueue(cmd_hash3);
-                 exec_command(cmd_hash3, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
+                 exec_command(cmd_hash3, [this](Finality fin) {});
                  // place-holder cmd4
                  //exec_command_noresp(cmd_hash4);
                  //cmd_noresp_pending.enqueue(cmd_hash4);
-                 exec_command(cmd_hash4, [this](Finality fin) { printf("[DEBUG] height: %d\n", fin.cmd_height); });
+                 exec_command(cmd_hash4, [this](Finality fin) {});
 
                  return true;
              }
