@@ -580,20 +580,6 @@ void HotStuffBase::start(
                 exec_command(msg.place_holder3, [this](Finality fin) {});
                 exec_command(msg.place_holder4, [this](Finality fin) {});
 
-                // try to keep the hash values *same* as the leader
-                // by running the same code for cmd_hash* and commit_set_hash
-
-                // auto cmd_hash1 = CommandDummy(0, cmd_cnt++).get_hash();
-                // auto cmd_hash2 = CommandDummy(1, cmd_cnt++).get_hash();
-                // auto cmd_hash3 = CommandDummy(2, cmd_cnt++).get_hash();        
-                // auto cmd_hash4 = CommandDummy(3, cmd_cnt++).get_hash();
-                // auto commit_set_hash = CommandDummy(4, cmd_cnt++).get_hash();
-
-                // exec_command(commit_set_hash, [this](Finality fin) {});
-                // exec_command(cmd_hash2, [this](Finality fin) {});
-                // exec_command(cmd_hash3, [this](Finality fin) {});
-                // exec_command(cmd_hash4, [this](Finality fin) {});
-
                 return true;
             }
             return false;
@@ -680,13 +666,13 @@ void HotStuffBase::start(
             const auto &cmd_hash = e.first;
             auto it = decision_waiting.find(cmd_hash);
 
-            if (decision_made.count(cmd_hash)) {
-                uint32_t height = decision_made[cmd_hash];
-                e.second(Finality(id, 0, 0, height, cmd_hash, uint256_t()));
-                break;
+            // if (decision_made.count(cmd_hash)) {
+            //     uint32_t height = decision_made[cmd_hash];
+            //     e.second(Finality(id, 0, 0, height, cmd_hash, uint256_t()));
+            //     break;
                 //continue;
-            }
-
+            //}
+        
             if (it == decision_waiting.end())
                 it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
             else
