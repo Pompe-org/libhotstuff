@@ -575,6 +575,10 @@ void HotStuffBase::start(
                 //     s4 << msg.place_holder4;
                 //     printf("    [DEBUG] exec_command for %d, 0x%s, %s, %s, %s\n", msg.stable_idx, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                 // }
+                DataStream s;
+                s << msg.commit_set_hash;
+                printf("[DEBUG] exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
+
                 exec_command(msg.commit_set_hash, [this](Finality fin) { printf("[DEBUG] non-leader height: %d\n", fin.cmd_height); });
                 // exec_command(msg.place_holder2, [this](Finality fin) {});
                 // exec_command(msg.place_holder3, [this](Finality fin) {});
@@ -653,6 +657,11 @@ void HotStuffBase::start(
                  //     s4 << cmd_hash4;
                  //     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                  // }
+
+                 DataStream s;
+                 s << commit_set_hash;
+                 printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s.get_hex().c_str());
+
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                      printf("[DEBUG] height: %d\n", fin.cmd_height);
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
