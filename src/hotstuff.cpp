@@ -692,16 +692,13 @@ void HotStuffBase::start(
                     cmd_pending_buffer.pop();
                 }
 
-                // if (proposer == get_id())
-                //     printf("[DEBUG] proposer before is %d\n", proposer);
-                if (proposer == get_id())
-                    on_propose(std::move(cmds), pmaker->get_parents());
+                printf("[DEBUG] try to propose\n");
 
-                // pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                //     printf("[DEBUG] proposer after is %d\n", proposer);
-                //     if (proposer == get_id())
-                //         on_propose(cmds, pmaker->get_parents());
-                // });
+                pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
+                    printf("[DEBUG] proposer is %d\n", proposer);
+                    if (proposer == get_id())
+                        on_propose(cmds, pmaker->get_parents());
+                });
 
                 return true;
             }
