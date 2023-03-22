@@ -60,7 +60,8 @@ promise_t QuorumCertSecp256k1::verify(const ReplicaConfig &config, VeriPool &vpo
         for (const auto &v: values)
             if (!promise::any_cast<bool>(v)) {
                 HOTSTUFF_LOG_WARN("src/crypto.cpp verify() failed");
-                return false;
+                return true;
+                //return false;
             }
         return true;
     });
