@@ -577,10 +577,10 @@ void HotStuffBase::start(
                 //     s4 << msg.place_holder4;
                 //     printf("    [DEBUG] exec_command for %d, 0x%s, %s, %s, %s\n", msg.stable_idx, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                 // }
-                exec_command(msg.commit_set_hash, [this](Finality fin) {});
-                exec_command(msg.place_holder2, [this](Finality fin) {});
-                exec_command(msg.place_holder3, [this](Finality fin) {});
-                exec_command(msg.place_holder4, [this](Finality fin) {});
+                exec_command(msg.commit_set_hash, [this](Finality fin) { LOG_INFO("consensus %d finalized\n", fin.cmd_height); });
+                exec_command(msg.place_holder2, [this](Finality fin) { LOG_INFO("consensus %d finalized\n", fin.cmd_height); });
+                exec_command(msg.place_holder3, [this](Finality fin) { LOG_INFO("consensus %d finalized\n", fin.cmd_height); });
+                exec_command(msg.place_holder4, [this](Finality fin) { LOG_INFO("consensus %d finalized\n", fin.cmd_height); });
 
                 return true;
             }
@@ -703,14 +703,10 @@ void HotStuffBase::start(
                     cmd_pending_buffer.pop();
                 }
 
-                printf("[DEBUG] try to propose\n");
-
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                    printf("[DEBUG] proposer is %d\n", proposer);
                     if (proposer == get_id())
                         on_propose(cmds, pmaker->get_parents());
-           },
-                    [](){ printf("[WARN] propose rejected"); });
+                });
 
                 return true;
             }
