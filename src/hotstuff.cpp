@@ -691,14 +691,11 @@ void HotStuffBase::start(
                     cmds.push_back(cmd_pending_buffer.front());
                     cmd_pending_buffer.pop();
                 }
-                // pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                //     printf("[DEBUG] proposer is %d\n", proposer);
-                //     if (proposer == get_id())
-                //         on_propose(cmds, pmaker->get_parents());
-                // });
-                //pmaker->beat().then([](ReplicaID proposer){});
-                if (proposer == get_id())
-                    on_propose(cmds, pmaker->get_parents());
+                pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
+                    printf("[DEBUG] proposer is %d\n", proposer);
+                    if (proposer == get_id())
+                        on_propose(cmds, pmaker->get_parents());
+                });
 
                 return true;
             }
