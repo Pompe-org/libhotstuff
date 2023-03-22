@@ -700,7 +700,8 @@ void HotStuffBase::start(
                     printf("[DEBUG] proposer is %d\n", proposer);
                     if (proposer == get_id())
                         on_propose(cmds, pmaker->get_parents());
-                                    }, [](){ printf("[WARN] propose rejected"); });
+           },
+                    [](){ printf("[WARN] propose rejected"); });
 
                 return true;
             }
