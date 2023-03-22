@@ -629,8 +629,6 @@ void HotStuffBase::start(
                  //     s4 << cmd_hash4;
                  //     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                  // }
-                 printf("[DEBUG] consensus %d start\n", debug_invoked++);
-
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
@@ -644,6 +642,8 @@ void HotStuffBase::start(
                      if (exec_count < end)
                          exec_count = end;
                  });
+                 usleep(2000);
+                 printf("[DEBUG] consensus %d start\n", debug_invoked++);
 
                  // place-holder cmd2
                  //exec_command_noresp(cmd_hash2);
