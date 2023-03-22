@@ -629,14 +629,14 @@ void HotStuffBase::start(
                  //     s4 << cmd_hash4;
                  //     printf("[DEBUG] consensus#%d, %d->%d, 0x%s, %s, %s, %s\n", debug_invoked++, start, end, s1.get_hex().c_str(), s2.get_hex().c_str(), s3.get_hex().c_str(), s4.get_hex().c_str());
                  // }
-                 printf("[DEBUG] consensus %d start\n", debug_invoked);
+                 //printf("[DEBUG] consensus %d start\n", debug_invoked);
                  debug_invoked += 4;
 
                  exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                     printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
+                     //printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
 
                      for (uint32_t i = start; i < end; i++) {
                          e.second(commit_set[i].first.first, commit_set[i].second);
@@ -650,15 +650,24 @@ void HotStuffBase::start(
                  // place-holder cmd2
                  //exec_command_noresp(cmd_hash2);
                  //cmd_noresp_pending.enqueue(cmd_hash2);
-                 exec_command(cmd_hash2, [this](Finality fin) { printf("[DEBUG] consensus %d finalized\n", fin.cmd_height); });
+                 exec_command(cmd_hash2, [this](Finality fin) {
+                     LOG_INFO("consensus %d finalized\n", fin.cmd_height);
+                     //printf("[DEBUG] consensus %d finalized\n", fin.cmd_height);
+                 });
                  // place-holder cmd3
                  //exec_command_noresp(cmd_hash3);
                  //cmd_noresp_pending.enqueue(cmd_hash3);
-                 exec_command(cmd_hash3, [this](Finality fin) { printf("[DEBUG] consensus %d finalized\n", fin.cmd_height); });
+                 exec_command(cmd_hash3, [this](Finality fin) {
+                     LOG_INFO("consensus %d finalized\n", fin.cmd_height);
+                     //printf("[DEBUG] consensus %d finalized\n", fin.cmd_height);
+                 });
                  // place-holder cmd4
                  //exec_command_noresp(cmd_hash4);
                  //cmd_noresp_pending.enqueue(cmd_hash4);
-                 exec_command(cmd_hash4, [this](Finality fin) { printf("[DEBUG] consensus %d finalized\n", fin.cmd_height); });
+                 exec_command(cmd_hash4, [this](Finality fin) {
+                     LOG_INFO("consensus %d finalized\n", fin.cmd_height);
+                     //printf("[DEBUG] consensus %d finalized\n", fin.cmd_height);
+                 });
 
                  return true;
              }
