@@ -696,8 +696,7 @@ void HotStuffBase::start(
                     printf("[DEBUG] proposer before is %d\n", proposer);
 
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                    if (proposer == get_id())
-                        printf("[DEBUG] proposer after is %d\n", proposer);
+                    printf("[DEBUG] proposer after is %d\n", proposer);
                     if (proposer == get_id())
                         on_propose(cmds, pmaker->get_parents());
                 });
