@@ -666,12 +666,11 @@ void HotStuffBase::start(
             const auto &cmd_hash = e.first;
             auto it = decision_waiting.find(cmd_hash);
 
-            // if (decision_made.count(cmd_hash)) {
-            //     uint32_t height = decision_made[cmd_hash];
-            //     e.second(Finality(id, 0, 0, height, cmd_hash, uint256_t()));
-            //     break;
-                //continue;
-            //}
+            if (decision_made.count(cmd_hash)) {
+                uint32_t height = decision_made[cmd_hash];
+                e.second(Finality(id, 0, 0, height, cmd_hash, uint256_t()));
+                return true;
+            }
         
             if (it == decision_waiting.end())
                 it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
