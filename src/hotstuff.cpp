@@ -257,8 +257,10 @@ promise_t HotStuffBase::async_deliver_blk(const uint256_t &blk_hash,
             pms.push_back(async_deliver_blk(phash, replica));
         promise::all(pms).then([this, blk](const promise::values_t values) {
             auto ret = promise::any_cast<bool>(values[0]) && this->on_deliver_blk(blk);
-            if (!ret)
+            if (!ret) {
                 HOTSTUFF_LOG_WARN("verification failed during async delivery");
+                this->on_deliver_blk(blk);
+            }
         });
     });
     return static_cast<promise_t &>(pm);
