@@ -421,7 +421,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             try {
                 cn.send_msg(MsgRespCmd(std::move(p.first)), p.second);
             } catch (std::exception &err) {
-                HOTSTUFF_LOG_WARN("unable to send MsgRespCmd to the client: %s", err.what());
+                //HOTSTUFF_LOG_WARN("unable to send MsgRespCmd to the client: %s", err.what());
             }
             return true;
         }
@@ -435,7 +435,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             try {
                 cn.send_msg(MsgOrdering1RespCmd(p.first.cmd_hash, p.first.timestamp, p.first.timestamp_us, p.first.sig), p.second);
             } catch (std::exception &err) {
-                HOTSTUFF_LOG_WARN("unable to send MsgOrdering1RespCmd to the client: %s", err.what());
+                //HOTSTUFF_LOG_WARN("unable to send MsgOrdering1RespCmd to the client: %s", err.what());
             }
             return true;
         }
@@ -449,7 +449,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
             try {
                 cn.send_msg(MsgOrdering2RespCmd(p.first.cmd_hash, p.first.timestamp, p.first.sig), p.second);
             } catch (std::exception &err) {
-                HOTSTUFF_LOG_WARN("unable to send MsgOrdering2RespCmd to the client: %s", err.what());
+                //HOTSTUFF_LOG_WARN("unable to send MsgOrdering2RespCmd to the client: %s", err.what());
             }
             return true;
         }
@@ -464,7 +464,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
                         debug_server_exec_resp++;
                         cn.send_msg(MsgConsensusRespClientCmd(p.first), p.second);
                     } catch (std::exception &err) {
-                        HOTSTUFF_LOG_WARN("unable to send MsgConsensusRespClientCmd to the client: %s", err.what());
+                        //HOTSTUFF_LOG_WARN("unable to send MsgConsensusRespClientCmd to the client: %s", err.what());
                     }
                     return true;
                 }
