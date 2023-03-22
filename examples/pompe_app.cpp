@@ -581,13 +581,13 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
 
 
 void HotStuffApp::start(const std::vector<std::tuple<NetAddr, bytearray_t, bytearray_t>> &reps) {
-    ev_stat_timer = TimerEvent(ec, [this](TimerEvent &) {
-        HotStuff::print_stat();
-        HotStuffApp::print_stat();
-        //HotStuffCore::prune(100);
-        ev_stat_timer.add(stat_period);
-    });
-    ev_stat_timer.add(stat_period);
+    // ev_stat_timer = TimerEvent(ec, [this](TimerEvent &) {
+    //     HotStuff::print_stat();
+    //     HotStuffApp::print_stat();
+    //     //HotStuffCore::prune(100);
+    //     ev_stat_timer.add(stat_period);
+    // });
+    // ev_stat_timer.add(stat_period);
     impeach_timer = TimerEvent(ec, [this](TimerEvent &) {
         if (get_decision_waiting().size())
             get_pace_maker()->impeach();
