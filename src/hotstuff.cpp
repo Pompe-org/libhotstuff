@@ -567,7 +567,7 @@ void HotStuffBase::start(
                 check_stable_point_index(msg.commit_set_hash, msg.stable_timestamp, msg.stable_idx);
 
                 //printf("######## nonleader exec_command\n");
-                if (msg.stable_idx < 500) {
+                if (msg.stable_idx < 1000) {
                     DataStream s1, s2, s3, s4;
                     s1 << msg.commit_set_hash;
                     s2 << msg.place_holder2;
@@ -645,7 +645,7 @@ void HotStuffBase::start(
                  //     debug_hashes.insert(cmd_hash4);
                  // }
                  static int debug_invoked = 0;
-                 if (next_stable_point_idx < 500) {
+                 if (next_stable_point_idx < 1000) {
                      DataStream s1, s2, s3, s4;
                      s1 << commit_set_hash;
                      s2 << cmd_hash2;
