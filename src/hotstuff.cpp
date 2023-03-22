@@ -696,7 +696,7 @@ void HotStuffBase::start(
                 //     if (proposer == get_id())
                 //         on_propose(cmds, pmaker->get_parents());
                 // });
-                pmaker->beat();
+                pmaker->beat().then([](ReplicaID proposer){});
                 if (proposer == get_id())
                     on_propose(cmds, pmaker->get_parents());
 
