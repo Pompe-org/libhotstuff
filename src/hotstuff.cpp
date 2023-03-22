@@ -577,7 +577,7 @@ void HotStuffBase::start(
                 // }
                 DataStream s;
                 s << msg.commit_set_hash;
-                printf("[DEBUG] exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
+                printf("[DEBUG] non-leader exec_command for %d, 0x%s\n", msg.stable_idx, s.get_hex().c_str());
 
                 exec_command(msg.commit_set_hash, [this](Finality fin) { printf("[DEBUG] non-leader height: %d\n", fin.cmd_height); });
                 // exec_command(msg.place_holder2, [this](Finality fin) {});
