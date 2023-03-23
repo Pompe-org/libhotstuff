@@ -322,10 +322,10 @@ int main(int argc, char **argv) {
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
-    printf("client backoff %d times\n", total_backoff);
-    printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
-    printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-    printf("[DEBUG] client%d receives %d exec responses\n", idx, debug_client_exec_resp);
+    //printf("client backoff %d times\n", total_backoff);
+    //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
+    //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
+    printf("[DEBUG] client%d receives %d ordering responsens, %d consensus responses\n", idx, elapsed.size(), debug_client_exec_resp);
     
     freopen(execlogfile.c_str(), "w", stdout);
 
