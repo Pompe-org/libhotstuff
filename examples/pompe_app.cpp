@@ -205,9 +205,9 @@ salticidae::BoxObj<HotStuffApp> papp = nullptr;
 std::vector<NetAddr> ledger_replicas;
 
 static int debug_timer_trigger = 0;
+static int debug_finish_ordering_phase = 0;
 static int debug_timer_callback_trigger = 0;
 static int debug_timer_callback_nresponse = 0;
-static int debug_pending_consensus_resp_ninsert = 0;
 static int debug_server_exec_resp = 0;
 int main(int argc, char **argv) {
     //Config config("hotstuff.conf");
@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 
     printf("server%d write to log file %s\n", idx, logfile.c_str());
     if (debug_timer_trigger > 0)
-        printf("[DEBUG] server%d send %d exec response; timer triggered %d times, callback %d times; insert %d entries to pending_consensus_resp\n", idx, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger, debug_pending_consensus_resp_ninsert);
+        printf("[DEBUG] server%d finished %d ordering phases; send %d exec response; timer triggered %d times, callback %d times\n", idx, debug_finish_ordering_phase, debug_server_exec_resp, debug_timer_trigger, debug_timer_callback_trigger);
     freopen(logfile.c_str(), "w", stdout);
 
     papp->commit_set_dump();
@@ -534,14 +534,7 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
     //HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
     exec_ordering2(cmd_hash, [this, addr](Ordering2Finality fin) {
             ordering2_queue.enqueue(std::make_pair(fin, addr));
-
-            // after responding for ordering phase
-            // add to the set for pending consensus response    
-            std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
-            debug_pending_consensus_resp_ninsert++;
-            pending_consensus_resp.push_back(std::make_pair(fin.cmd_hash, addr));
-            // below just for debugging purpose
-            //consensus_queue.enqueue(std::make_pair(fin.cmd_hash, addr));
+            debug_finish_ordering_phase++;
     });
 
     // only a single leader starts the consensus phase
@@ -568,12 +561,7 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
         exec_consensus(curr_clock_us, [this](uint256_t cmd_hash, NetAddr addr) {
             debug_timer_callback_trigger++;
 
-            // std::lock_guard<std::mutex> guard(pending_consensus_resp_mutex);
-            // debug_timer_callback_nresponse += pending_consensus_resp.size();
             consensus_queue.enqueue(std::make_pair(cmd_hash, addr));
-            // for (auto &p: pending_consensus_resp)
-            //     consensus_queue.enqueue(p);
-            pending_consensus_resp.clear();
         });
     }
 }
