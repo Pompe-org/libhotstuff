@@ -91,10 +91,10 @@ bool try_send(bool check = true) {
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
-        if (count_sent != count_order  // expect more ordering phase reply 
-            && count_sent > count_exec + max_waiting_exec) { // sending too fast
+        if (count_sent > count_exec + max_waiting_exec) {
             count_backoff++;
-            return false;
+            volatile long long cnt = 0;
+            for (cnt = 0; cnt < 10000000000LL; cnt++);
         }
         count_sent++;
 
