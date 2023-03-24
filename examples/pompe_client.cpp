@@ -68,10 +68,10 @@ struct Request {
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
 };
 
-int count_order, count_exec;
 int BATCH_SIZE, STABLE_PERIOD;
-int count_backoff, total_backoff;
-struct timespec last_exec_resp_ts;
+const int max_waiting_exec = 200;
+int count_cmd_sent, count_exec_resp;
+int count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
@@ -91,6 +91,13 @@ bool try_send(bool check = true) {
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
+        // client backoff
+        if (count_cmd_sent > count_exec_resp + max_waiting_exec) {
+            count_backoff++;
+            return false;
+        }
+
+        count_cmd_sent++;
         auto cmd = new CommandDummy(cid, cnt++);
         MsgOrdering1ReqCmd msg(*cmd);
         //for (auto &p: conns) mn.send_msg(msg, p.second);
@@ -165,7 +172,6 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     if (it == waiting.end()) return;
     auto &et = it->second.et;
     
-
     if (++it->second.ordering_rtt2 != nfaulty*2+1) return; // wait for 2f + 1 ack
     et.stop();
 
@@ -187,46 +193,18 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
 #endif
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
-
-    // slowdown if waiting too long for the consensus phase
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    uint64_t now_clock_us = now.tv_sec;
-    now_clock_us *= 1000 * 1000;
-    now_clock_us += now.tv_nsec/1000;
-
-    uint64_t last_clock_us = last_exec_resp_ts.tv_sec;
-    last_clock_us *= 1000 * 1000;
-    last_clock_us += last_exec_resp_ts.tv_nsec / 1000;
-
-    const int ONE_SEC = 1000000;
-    if (last_clock_us == 0 || now_clock_us - last_clock_us < std::max(ONE_SEC * 5, STABLE_PERIOD * 30)) {
-        // last consensus response less than 1sec ago
-        count_backoff = 0;
-        while (try_send());
-    } else {
-        // slowdown the speed of sending requests
-        count_backoff++;
-        total_backoff++;
-        usleep(ONE_SEC * 3);
-        // usleep(ONE_SEC * (1 << count_backoff));
-        clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
-        while (try_send());
-    }
+    while (try_send());
 }
 
-static int debug_client_exec_resp = 0;
 void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Net::conn_t &) {
-    clock_gettime(CLOCK_MONOTONIC, &last_exec_resp_ts);
-
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
-    debug_client_exec_resp++;
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting_exec.find(cmd_hash);
-    if (it == waiting_exec.end()) return;    
+    if (it == waiting_exec.end()) return;
     auto &et_exec = it->second.et_exec;
 
     if (++it->second.ordering_rtt3 != 1) return; // wait for 1 exec ack
+    count_exec_resp++;
     et_exec.stop();
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
@@ -322,10 +300,9 @@ int main(int argc, char **argv) {
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
-    //printf("client backoff %d times\n", total_backoff);
     //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-    printf("[DEBUG] client%d receives %d ordering responsens, %d consensus responses\n", idx, elapsed.size(), debug_client_exec_resp);
+    printf("[DEBUG] client%d receives %d ordering, %d consensus w/ %d backoffs\n", idx, elapsed.size(), count_exec_resp, count_backoff);
     
     freopen(execlogfile.c_str(), "w", stdout);
 
