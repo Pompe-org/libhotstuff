@@ -94,7 +94,8 @@ bool try_send(bool check = true) {
         if (count_sent > count_exec + max_waiting_exec) {
             count_backoff++;
             volatile long long cnt = 0;
-            for (cnt = 0; cnt < 10000000000LL; cnt++);
+            usleep(100000); // 100ms
+            //for (cnt = 0; cnt < 10000000000LL; cnt++);
         }
         count_sent++;
 
