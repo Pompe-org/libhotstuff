@@ -68,7 +68,6 @@ struct Request {
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
 };
 
-bool terminated = false;
 int BATCH_SIZE, STABLE_PERIOD;
 const int max_waiting_exec = 500;
 int count_sent, count_order, count_exec, count_backoff;
@@ -92,11 +91,11 @@ bool try_send(bool check = true) {
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
-        if (count_sent > count_exec + max_waiting_exec) {
-            count_backoff++;
-            volatile long long cnt = 0;
-            for (cnt = 0; cnt < 10000000000LL && !terminated; cnt++);
-        }
+        // if (count_sent > count_exec + max_waiting_exec) {
+        //     count_backoff++;
+        //     volatile long long cnt = 0;
+        //     for (cnt = 0; cnt < 10000000000LL && !terminated; cnt++);
+        // }
         count_sent++;
 
         auto cmd = new CommandDummy(cid, cnt++);
@@ -303,7 +302,6 @@ int main(int argc, char **argv) {
 
     //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-    terminated = true;
     printf("[DEBUG] client%d receives %d ordering, %d consensus w/ %d backoffs\n", cid, elapsed.size(), count_exec, count_backoff);
     
     freopen(execlogfile.c_str(), "w", stdout);
