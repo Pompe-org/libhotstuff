@@ -69,7 +69,7 @@ struct Request {
 };
 
 int BATCH_SIZE, STABLE_PERIOD;
-const int max_waiting_exec = 200;
+const int max_waiting_exec = 500;
 int count_cmd_sent, count_exec_resp;
 int count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
