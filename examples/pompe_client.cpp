@@ -91,13 +91,13 @@ bool try_send(bool check = true) {
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
-        if (count_sent > count_exec + max_waiting_exec) {
-            count_backoff++;
-            volatile long long cnt = 0;
-            //usleep(100000); // 100ms
-            for (cnt = 0; cnt < 1000000LL; cnt++);
-        }
-        count_sent++;
+        // if (count_sent > count_exec + max_waiting_exec) {
+        //     count_backoff++;
+        //     volatile long long cnt = 0;
+        //     //usleep(100000); // 100ms
+        //     for (cnt = 0; cnt < 1000000LL; cnt++);
+        // }
+        // count_sent++;
 
         auto cmd = new CommandDummy(cid, cnt++);
         MsgOrdering1ReqCmd msg(*cmd);
