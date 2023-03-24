@@ -69,7 +69,7 @@ struct Request {
 };
 
 int BATCH_SIZE, STABLE_PERIOD;
-const int max_waiting_exec = 5000;
+const int max_waiting_exec = 500;
 int count_cmd_sent, count_exec_resp;
 int count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
@@ -94,7 +94,7 @@ bool try_send(bool check = true) {
         // client backoff
         if (count_cmd_sent > count_exec_resp + max_waiting_exec) {
             count_backoff++;
-            return false;
+            usleep(100000);  // 100ms
         }
 
         count_cmd_sent++;
