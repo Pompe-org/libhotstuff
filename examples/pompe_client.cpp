@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
 
     //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
-    //printf("[DEBUG] client%d receives %d ordering, %d consensus w/ %d backoffs\n", cid, elapsed.size(), count_exec, count_backoff);
+    printf("[DEBUG] client%d receives %d ordering, %d consensus w/ %d backoffs\n", cid, elapsed.size(), count_exec, count_backoff);
     
     freopen(execlogfile.c_str(), "w", stdout);
 
