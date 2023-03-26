@@ -529,7 +529,9 @@ void HotStuffApp::client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&msg,
     }
 
     // add to local commit set
+    commit_set_mutex.lock();
     commit_set.push_back(std::make_pair(std::make_pair(cmd_hash, timestamp), addr));
+    commit_set_mutex.unlock();
 
     //HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
     exec_ordering2(cmd_hash, [this, addr](Ordering2Finality fin) {

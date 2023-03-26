@@ -450,6 +450,7 @@ HotStuffBase::HotStuffBase(uint32_t blk_size,
 void HotStuffBase::check_stable_point_index(uint256_t commit_set_hash, uint64_t stable_timestamp, uint32_t stable_idx) {
     // a dummy implementation that only checks the time interval of the batch and the number of commands in the batch
 
+    std::lock_guard<std::mutex> guard(commit_set_mutex);
     if (stable_point_idx < stable_idx) {
         std::sort(commit_set.begin() + stable_point_idx, commit_set.end(), commit_set_cmp);
         stable_point_idx = stable_idx;
@@ -599,6 +600,7 @@ void HotStuffBase::start(
                  auto cmd_hash3 = CommandDummy(102, cmd_cnt).get_hash();
                  auto cmd_hash4 = CommandDummy(103, cmd_cnt).get_hash();
 
+                 std::lock_guard<std::mutex> guard(commit_set_mutex);
                  uint32_t commit_set_size = commit_set.size();
                  std::sort(commit_set.begin() + stable_point_idx, commit_set.end(), commit_set_cmp);
                  uint32_t next_stable_point_idx = stable_point_idx;
