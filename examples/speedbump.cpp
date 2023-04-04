@@ -47,11 +47,10 @@ class Speedbump {
     EventContext ec;
     EventContext req_ec;
     EventContext resp_ec;
+    std::thread req_thread, resp_thread;
 
     // For client side
-    std::thread req_thread, resp_thread;
     ClientNetwork<opcode_t> cn;
-    salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
     std::unordered_map<const uint256_t, NetAddr> pending_resp;
 
     // For server side
