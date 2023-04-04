@@ -46,7 +46,8 @@ class Speedbump {
     int idx;
     EventContext ec;
     EventContext req_ec;
-    std::thread req_thread;
+    EventContext resp_ec;
+    std::thread req_thread, resp_thread;
     ClientNetwork<opcode_t> cn;
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
 
@@ -79,32 +80,33 @@ class Speedbump {
 
 public:
     Speedbump(int idx,
-               const EventContext &ec,
-               NetAddr clisten_addr,
-               NetAddr node_addr,
-               const ClientNetwork<opcode_t>::Config &clinet_config):
+              const EventContext &ec,
+              NetAddr clisten_addr,
+              NetAddr node_addr,
+              const ClientNetwork<opcode_t>::Config &clinet_config):
         ec(ec),
         idx(idx),
-        mn(ec, Net::Config()),
+        mn(resp_ec, Net::Config()),
         cn(req_ec, clinet_config) {
-
-        // Connect to client
-        req_tcall = new salticidae::ThreadCall(req_ec);
-        cn.reg_handler(salticidae::generic_bind(&Speedbump::client_req_handler, this, _1, _2));
-        cn.start();
-        cn.listen(clisten_addr);
 
         // Connect to node
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_resp_handler, this, _1, _2));
         mn.start();
         node_conn = mn.connect_sync(node_addr);
 
+        // Connect to client
+        cn.reg_handler(salticidae::generic_bind(&Speedbump::client_req_handler, this, _1, _2));
+        cn.start();
+        cn.listen(clisten_addr);
+
         req_thread = std::thread([this]() { req_ec.dispatch(); });
+        resp_thread = std::thread([this]() { resp_ec.dispatch(); });
         //while(1);
     }
 
     void stop() {
         req_ec.stop();
+        resp_ec.stop();
         //req_thread.join();
         ec.stop();
     }
