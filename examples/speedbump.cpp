@@ -45,6 +45,7 @@ using HotStuff = hotstuff::HotStuffSecp256k1;
 
 class ClientSide {
     int idx;
+    EventContext ec;
     EventContext req_ec;
     std::thread req_thread;
     ClientNetwork<opcode_t> cn;
@@ -68,8 +69,10 @@ class ClientSide {
     }
 public:
     ClientSide(int idx,
+               const EventContext &ec,
                NetAddr clisten_addr,
                const ClientNetwork<opcode_t>::Config &clinet_config):
+        ec(ec),
         idx(idx),
         cn(req_ec, clinet_config) {
 
@@ -84,8 +87,11 @@ public:
     }
 
     void stop() {
+        printf("Within speedbump stop\n");
         req_ec.stop();
-        req_thread.join();
+        //req_thread.join();
+        ec.stop();
+        printf("Finish speedbump stop\n");
     }
 };
 
@@ -141,9 +147,8 @@ int main(int argc, char **argv) {
         .burst_size(opt_cliburst->get())
         .nworker(opt_clinworker->get());
 
-    auto cs = new ClientSide(idx, NetAddr("0.0.0.0", client_port), clinet_config);
-
     EventContext ec;
+    auto cs = new ClientSide(idx, ec, NetAddr("0.0.0.0", client_port), clinet_config);
     auto shutdown = [&](int) { cs->stop(); };
     salticidae::SigEvent ev_sigint(ec, shutdown);
     salticidae::SigEvent ev_sigterm(ec, shutdown);
