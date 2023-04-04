@@ -82,6 +82,13 @@ public:
         req_thread = std::thread([this]() { printf("Bump#%d in the req thread!\n", this->idx);req_ec.dispatch(); });
         //while(1);
     }
+
+    void stop() {
+        req_tcall->async_call([this](salticidae::ThreadCall::Handle &) {
+            req_ec.stop();
+        });
+        req_thread.join();
+    }
 };
 
 std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
@@ -137,6 +144,15 @@ int main(int argc, char **argv) {
         .nworker(opt_clinworker->get());
 
     auto cs = new ClientSide(idx, NetAddr("0.0.0.0", client_port), clinet_config);
-        
+
+    EventContext ec;
+    auto shutdown = [&](int) { cs->stop(); };
+    salticidae::SigEvent ev_sigint(ec, shutdown);
+    salticidae::SigEvent ev_sigterm(ec, shutdown);
+    ev_sigint.add(SIGINT);
+    ev_sigterm.add(SIGTERM);
+
+    ec.dispatch();
+
     return 0;
 }
