@@ -33,3 +33,7 @@ target_link_libraries(pompe-app hotstuff_static)
 
 add_executable(pompe-client pompe_client.cpp)
 target_link_libraries(pompe-client hotstuff_static)
+
+
+add_executable(speedbump speedbump.cpp)
+target_link_libraries(speedbump hotstuff_static)
