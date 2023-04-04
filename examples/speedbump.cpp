@@ -101,33 +101,36 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 }
 
 int main(int argc, char **argv) {
-    Config config(argv[1]);
+    std::string config_node_file(argv[2]);
+    Config config_bump(argv[1]);
+    
     auto opt_idx = Config::OptValInt::create(0);
-    auto opt_replicas = Config::OptValStrVec::create();
+    auto opt_bumps = Config::OptValStrVec::create();
     auto opt_clinworker = Config::OptValInt::create(8);
     auto opt_cliburst = Config::OptValInt::create(1000);
     auto opt_client_port = Config::OptValInt::create(-1);
     auto opt_max_cli_msg = Config::OptValInt::create(65536); // 64K by default
 
-    config.add_opt("idx", opt_idx, Config::SET_VAL, 'i', "specify the index in the replica list");
-    config.add_opt("replica", opt_replicas, Config::APPEND, 'a', "add an replica to the list");
-    config.add_opt("clinworker", opt_clinworker, Config::SET_VAL, 'M', "the number of threads for client network");
-    config.add_opt("cliburst", opt_cliburst, Config::SET_VAL, 'B', "");
-    config.add_opt("cport", opt_client_port, Config::SET_VAL, 'c', "specify the port listening for clients");
-    config.add_opt("max-cli-msg", opt_max_cli_msg, Config::SET_VAL, 'S', "the maximum client message size");
+    config_bump.add_opt("idx", opt_idx, Config::SET_VAL, 'i', "specify the index in the replica list");
+    config_bump.add_opt("replica", opt_bumps, Config::APPEND, 'a', "add an replica to the list");
+    config_bump.add_opt("clinworker", opt_clinworker, Config::SET_VAL, 'M', "the number of threads for client network");
+    config_bump.add_opt("cliburst", opt_cliburst, Config::SET_VAL, 'B', "");
+    config_bump.add_opt("cport", opt_client_port, Config::SET_VAL, 'c', "specify the port listening for clients");
+    config_bump.add_opt("max-cli-msg", opt_max_cli_msg, Config::SET_VAL, 'S', "the maximum client message size");
 
-    config.parse(argc, argv);
+    config_bump.parse(argc, argv);
     auto idx = opt_idx->get();
 
-    std::vector<std::tuple<std::string, std::string, std::string>> replicas;
-    for (const auto &s: opt_replicas->get())
+    // Get the addr:port of this bump
+    std::vector<std::tuple<std::string, std::string, std::string>> bumps;
+    for (const auto &s: opt_bumps->get())
     {
         auto res = trim_all(split(s, ","));
         if (res.size() != 3)
             throw HotStuffError("invalid replica info");
-        replicas.push_back(std::make_tuple(res[0], res[1], res[2]));
+        bumps.push_back(std::make_tuple(res[0], res[1], res[2]));
     }
-    std::string binding_addr = std::get<0>(replicas[idx]);
+    std::string binding_addr = std::get<0>(bumps[idx]);   // Bump #idx
     auto p = split_ip_port_cport(binding_addr);
     size_t tmp;
     auto client_port = opt_client_port->get();
@@ -137,7 +140,31 @@ int main(int argc, char **argv) {
         throw HotStuffError("client port not specified");
     }
 
-    //printf("This is the speedbump #%d, listen to port %d\n", idx, client_port);
+    // Get the addr:port of the corresponding node
+    Config config_node(config_node_file.c_str());
+    auto opt_replicas = Config::OptValStrVec::create();
+    config_node.add_opt("replica", opt_replicas, Config::APPEND, 'a', "add an replica to the list");
+    config_node.parse(argc, argv);
+
+    std::vector<NetAddr> nodes;
+    std::vector<std::string> raw;
+    for (const auto &s: opt_replicas->get())
+    {
+        auto res = salticidae::trim_all(salticidae::split(s, ","));
+        if (res.size() < 1)
+            throw HotStuffError("format error");
+        raw.push_back(res[0]);
+    }
+    if (!(0 <= idx && (size_t)idx < raw.size() && raw.size() > 0))
+        throw std::invalid_argument("out of range");
+    for (const auto &p: raw)
+    {
+        auto _p = split_ip_port_cport(p);
+        size_t _;
+        printf("p.first: %s, p.second: %s\n", _p.first.c_str(), _p.second.c_str());
+        nodes.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
+    }
+
     // Setup network with clients
     ClientNetwork<opcode_t>::Config clinet_config;
     clinet_config.max_msg_size(opt_max_cli_msg->get());
