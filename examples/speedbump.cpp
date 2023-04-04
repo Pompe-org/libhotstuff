@@ -50,6 +50,7 @@ class Speedbump {
     std::thread req_thread, resp_thread;
     ClientNetwork<opcode_t> cn;
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
+    std::unordered_map<const uint256_t, NetAddr> pending_resp;
 
     using Net = salticidae::MsgNetwork<opcode_t>;
     Net mn;
@@ -67,16 +68,19 @@ class Speedbump {
         const NetAddr addr = conn->get_addr();
         auto cmd = parse_cmd(msg.serialized);
         const auto &cmd_hash = cmd->get_hash();
+        pending_resp[cmd_hash] = addr;
         printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
         // Forward client request to one node
-        MsgReqCmd _msg(*cmd);
-        mn.send_msg(_msg, node_conn);
+        MsgReqCmd msg_forward(*cmd);
+        mn.send_msg(msg_forward, node_conn);
     }
 
     void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
         auto &fin = msg.fin;
         const uint256_t &cmd_hash = fin.cmd_hash;
         printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
+        NetAddr addr = pending_resp[cmd_hash];
+        cn.send_msg(MsgRespCmd(std::move(fin)), addr);
     }
 
 public:
