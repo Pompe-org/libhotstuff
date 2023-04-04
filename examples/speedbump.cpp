@@ -84,9 +84,7 @@ public:
     }
 
     void stop() {
-        req_tcall->async_call([this](salticidae::ThreadCall::Handle &) {
-            req_ec.stop();
-        });
+        req_ec.stop();
         req_thread.join();
     }
 };
