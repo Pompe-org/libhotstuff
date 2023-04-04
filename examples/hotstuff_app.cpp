@@ -227,6 +227,7 @@ int main(int argc, char **argv) {
         } catch (std::invalid_argument &) {
             throw HotStuffError("client port not specified");
         }
+        printf("Node#%d is at %s listening to port%d\n", p.first.c_str(), client_port);
     }
 
     NetAddr plisten_addr{split_ip_port_cport(binding_addr).first};
