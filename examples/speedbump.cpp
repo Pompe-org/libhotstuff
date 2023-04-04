@@ -62,7 +62,7 @@ class ClientSide {
         const NetAddr addr = conn->get_addr();
         auto cmd = parse_cmd(msg.serialized);
         const auto &cmd_hash = cmd->get_hash();
-        printf("processing %s", std::string(*cmd).c_str());
+        printf("Bump #%d processing %s\n", idx, std::string(*cmd).c_str());
         // exec_command(cmd_hash, [this, addr](Finality fin) {
         //     resp_queue.enqueue(std::make_pair(fin, addr));
         // });
