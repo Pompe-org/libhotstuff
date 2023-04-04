@@ -76,6 +76,7 @@ class Speedbump {
         const uint256_t &cmd_hash = fin.cmd_hash;
         printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
     }
+
 public:
     Speedbump(int idx,
                const EventContext &ec,
