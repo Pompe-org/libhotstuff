@@ -80,7 +80,7 @@ public:
         cn.listen(clisten_addr);
 
         req_thread = std::thread([this]() { printf("Bump#%d in the req thread!\n", this->idx);req_ec.dispatch(); });
-        while(1);
+        //while(1);
     }
 };
 
