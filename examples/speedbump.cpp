@@ -98,7 +98,7 @@ public:
         mn.start();
         node_conn = mn.connect_sync(node_addr);
 
-        req_thread = std::thread([this]() { printf("Bump#%d is in the req thread!\n", this->idx);req_ec.dispatch(); });
+        req_thread = std::thread([this]() { req_ec.dispatch(); });
         //while(1);
     }
 
