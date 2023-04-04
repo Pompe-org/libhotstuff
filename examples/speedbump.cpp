@@ -44,11 +44,12 @@ using HotStuff = hotstuff::HotStuffSecp256k1;
 
 
 class ClientSide {
-    using conn_t = ClientNetwork<opcode_t>::conn_t;
+    int idx;
     EventContext req_ec;
     std::thread req_thread;
     ClientNetwork<opcode_t> cn;
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
+    using conn_t = ClientNetwork<opcode_t>::conn_t;
 
     static command_t parse_cmd(DataStream &s) {
         auto cmd = new CommandDummy();
@@ -66,8 +67,10 @@ class ClientSide {
         // });
     }
 public:
-    ClientSide(NetAddr clisten_addr,
+    ClientSide(int idx,
+               NetAddr clisten_addr,
                const ClientNetwork<opcode_t>::Config &clinet_config):
+        idx(idx),
         cn(req_ec, clinet_config) {
 
         req_tcall = new salticidae::ThreadCall(req_ec);
@@ -76,7 +79,8 @@ public:
         cn.start();
         cn.listen(clisten_addr);
 
-        req_thread = std::thread([this]() { req_ec.dispatch(); });
+        req_thread = std::thread([this]() { printf("Bump#%d in the req thread!\n", this->idx);req_ec.dispatch(); });
+        while(1);
     }
 };
 
@@ -97,6 +101,12 @@ int main(int argc, char **argv) {
     auto opt_max_cli_msg = Config::OptValInt::create(65536); // 64K by default
 
     config.add_opt("idx", opt_idx, Config::SET_VAL, 'i', "specify the index in the replica list");
+    config.add_opt("replica", opt_replicas, Config::APPEND, 'a', "add an replica to the list");
+    config.add_opt("clinworker", opt_clinworker, Config::SET_VAL, 'M', "the number of threads for client network");
+    config.add_opt("cliburst", opt_cliburst, Config::SET_VAL, 'B', "");
+    config.add_opt("cport", opt_client_port, Config::SET_VAL, 'c', "specify the port listening for clients");
+    config.add_opt("max-cli-msg", opt_max_cli_msg, Config::SET_VAL, 'S', "the maximum client message size");
+
     config.parse(argc, argv);
     auto idx = opt_idx->get();
 
@@ -126,7 +136,7 @@ int main(int argc, char **argv) {
         .burst_size(opt_cliburst->get())
         .nworker(opt_clinworker->get());
 
-    auto cs = new ClientSide(NetAddr("0.0.0.0", client_port), clinet_config);
+    auto cs = new ClientSide(idx, NetAddr("0.0.0.0", client_port), clinet_config);
         
     return 0;
 }
