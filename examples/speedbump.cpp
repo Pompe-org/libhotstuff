@@ -69,8 +69,7 @@ class Speedbump {
         const auto &cmd_hash = cmd->get_hash();
         printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
         // Forward client request to one node
-        auto _cmd = new CommandDummy(0, cnt++);
-        MsgReqCmd _msg(*_cmd);
+        MsgReqCmd _msg(*cmd);
         mn.send_msg(_msg, node_conn);
     }
 
