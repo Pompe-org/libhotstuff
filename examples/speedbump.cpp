@@ -45,9 +45,10 @@ using HotStuff = hotstuff::HotStuffSecp256k1;
 class Speedbump {
     int idx, cnt;
     EventContext ec;
+    EventContext req_ec;
+    EventContext resp_ec;
 
     // For client side
-    EventContext req_ec;
     std::thread req_thread, resp_thread;
     ClientNetwork<opcode_t> cn;
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
@@ -56,7 +57,6 @@ class Speedbump {
     // For server side
     using Net = salticidae::MsgNetwork<opcode_t>;
     Net mn;
-    EventContext resp_ec;
     Net::conn_t node_conn;
 
     // For debugging
