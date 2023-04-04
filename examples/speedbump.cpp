@@ -43,7 +43,7 @@ using hotstuff::promise_t;
 using HotStuff = hotstuff::HotStuffSecp256k1;
 
 class Speedbump {
-    int idx;
+    int idx, cnt;
     EventContext ec;
     EventContext req_ec;
     EventContext resp_ec;
@@ -68,8 +68,10 @@ class Speedbump {
         auto cmd = parse_cmd(msg.serialized);
         const auto &cmd_hash = cmd->get_hash();
         printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
-        // Forward client request to node
-        mn.send_msg(msg, node_conn);
+        // Forward client request to one node
+        auto _cmd = new CommandDummy(0, cnt++);
+        MsgReqCmd _msg(*_cmd);
+        mn.send_msg(_msg, node_conn);
     }
 
     void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
