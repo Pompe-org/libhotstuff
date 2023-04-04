@@ -157,11 +157,10 @@ int main(int argc, char **argv) {
     }
     if (!(0 <= idx && (size_t)idx < raw.size() && raw.size() > 0))
         throw std::invalid_argument("out of range");
-    for (const auto &p: raw)
     {
-        auto _p = split_ip_port_cport(p);
+        auto _p = split_ip_port_cport(raw[idx]);
         size_t _;
-        printf("p.first: %s, p.second: %s\n", _p.first.c_str(), _p.second.c_str());
+        printf("Bump#%d connects to %s, %s\n", idx, _p.first.c_str(), _p.second.c_str());
         nodes.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
     }
 
