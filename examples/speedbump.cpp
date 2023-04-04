@@ -42,14 +42,18 @@ using hotstuff::promise_t;
 
 using HotStuff = hotstuff::HotStuffSecp256k1;
 
-
-class ClientSide {
+class Speedbump {
     int idx;
     EventContext ec;
     EventContext req_ec;
     std::thread req_thread;
     ClientNetwork<opcode_t> cn;
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
+
+    using Net = salticidae::MsgNetwork<opcode_t>;
+    Net mn;
+    Net::conn_t node_conn;
+
     using conn_t = ClientNetwork<opcode_t>::conn_t;
 
     static command_t parse_cmd(DataStream &s) {
@@ -62,25 +66,37 @@ class ClientSide {
         const NetAddr addr = conn->get_addr();
         auto cmd = parse_cmd(msg.serialized);
         const auto &cmd_hash = cmd->get_hash();
-        printf("Bump #%d processing %s\n", idx, std::string(*cmd).c_str());
-        // exec_command(cmd_hash, [this, addr](Finality fin) {
-        //     resp_queue.enqueue(std::make_pair(fin, addr));
-        // });
+        printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
+        // Forward client request to node
+        mn.send_msg(msg, node_conn);
+    }
+
+    void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
+        auto &fin = msg.fin;
+        const uint256_t &cmd_hash = fin.cmd_hash;
+        printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
     }
 public:
-    ClientSide(int idx,
+    Speedbump(int idx,
                const EventContext &ec,
                NetAddr clisten_addr,
+               NetAddr node_addr,
                const ClientNetwork<opcode_t>::Config &clinet_config):
         ec(ec),
         idx(idx),
+        mn(ec, Net::Config()),
         cn(req_ec, clinet_config) {
 
+        // Connect to client
         req_tcall = new salticidae::ThreadCall(req_ec);
-
-        cn.reg_handler(salticidae::generic_bind(&ClientSide::client_req_handler, this, _1, _2));
+        cn.reg_handler(salticidae::generic_bind(&Speedbump::client_req_handler, this, _1, _2));
         cn.start();
         cn.listen(clisten_addr);
+
+        // Connect to node
+        mn.reg_handler(salticidae::generic_bind(&Speedbump::client_resp_handler, this, _1, _2));
+        mn.start();
+        node_conn = mn.connect_sync(node_addr);
 
         req_thread = std::thread([this]() { printf("Bump#%d is in the req thread!\n", this->idx);req_ec.dispatch(); });
         //while(1);
@@ -146,7 +162,7 @@ int main(int argc, char **argv) {
     config_node.add_opt("replica", opt_replicas, Config::APPEND, 'a', "add an replica to the list");
     config_node.parse(argc, argv);
 
-    std::vector<NetAddr> nodes;
+    NetAddr node;
     std::vector<std::string> raw;
     for (const auto &s: opt_replicas->get())
     {
@@ -161,7 +177,7 @@ int main(int argc, char **argv) {
         auto _p = split_ip_port_cport(raw[idx]);
         size_t _;
         printf("Bump#%d connects to %s, %s\n", idx, _p.first.c_str(), _p.second.c_str());
-        nodes.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
+        node = NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_)));
     }
 
     // Setup network with clients
@@ -172,7 +188,7 @@ int main(int argc, char **argv) {
         .nworker(opt_clinworker->get());
 
     EventContext ec;
-    auto cs = new ClientSide(idx, ec, NetAddr("0.0.0.0", client_port), clinet_config);
+    auto cs = new Speedbump(idx, ec, NetAddr("0.0.0.0", client_port), node, clinet_config);
     auto shutdown = [&](int) { cs->stop(); };
     salticidae::SigEvent ev_sigint(ec, shutdown);
     salticidae::SigEvent ev_sigterm(ec, shutdown);
