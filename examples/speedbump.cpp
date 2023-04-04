@@ -118,7 +118,7 @@ public:
     }
 
     void stop() {
-        printf("Bump #%d forward=%d, backward=%d\n", idx, num_forwarded, num_backwarded);
+        printf("[DEBUG] Bump #%d forward=%d, backward=%d\n", idx, num_forwarded, num_backwarded);
         req_ec.stop();
         resp_ec.stop();
         //req_thread.join();
