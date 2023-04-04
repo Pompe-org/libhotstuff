@@ -221,9 +221,9 @@ int main(int argc, char **argv) {
     if (client_port == -1)
     {
         auto p = split_ip_port_cport(binding_addr);
-        size_t idx;
+        size_t tmp;
         try {
-            client_port = stoi(p.second, &idx);
+            client_port = stoi(p.second, &tmp);
         } catch (std::invalid_argument &) {
             throw HotStuffError("client port not specified");
         }
