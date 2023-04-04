@@ -82,16 +82,14 @@ public:
         cn.start();
         cn.listen(clisten_addr);
 
-        req_thread = std::thread([this]() { printf("Bump#%d in the req thread!\n", this->idx);req_ec.dispatch(); });
+        req_thread = std::thread([this]() { printf("Bump#%d is in the req thread!\n", this->idx);req_ec.dispatch(); });
         //while(1);
     }
 
     void stop() {
-        printf("Within speedbump stop\n");
         req_ec.stop();
         //req_thread.join();
         ec.stop();
-        printf("Finish speedbump stop\n");
     }
 };
 
@@ -139,7 +137,7 @@ int main(int argc, char **argv) {
         throw HotStuffError("client port not specified");
     }
 
-    printf("This is the speedbump #%d, listen to port %d\n", idx, client_port);
+    //printf("This is the speedbump #%d, listen to port %d\n", idx, client_port);
     // Setup network with clients
     ClientNetwork<opcode_t>::Config clinet_config;
     clinet_config.max_msg_size(opt_max_cli_msg->get());
