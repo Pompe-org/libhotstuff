@@ -8,8 +8,8 @@ if __name__ == "__main__":
     parser.add_argument('--prefix', type=str, default='hotstuff.gen')
     parser.add_argument('--ips', type=str, default=None)
     parser.add_argument('--iter', type=int, default=10)
-    parser.add_argument('--pport', type=int, default=10000)
-    parser.add_argument('--cport', type=int, default=20000)
+    parser.add_argument('--pport', type=int, default=30000)
+    parser.add_argument('--cport', type=int, default=40000)
     parser.add_argument('--keygen', type=str, default='./hotstuff-keygen')
     parser.add_argument('--tls-keygen', type=str, default='./hotstuff-tls-keygen')
     parser.add_argument('--nodes', type=str, default='nodes.txt')
@@ -24,8 +24,8 @@ if __name__ == "__main__":
 
 
     if args.ips is None:
-        #ips = ['host0', 'host1', 'host2', 'host3']
-        ips = ['strong_0', 'strong_1', 'strong_2', 'strong_3']
+        ips = ['host0', 'host1', 'host2', 'host3']
+        #ips = ['strong_0', 'strong_1', 'strong_2', 'strong_3']
     else:
         ips = [l.strip() for l in open(args.ips, 'r').readlines()]
     prefix = args.prefix
