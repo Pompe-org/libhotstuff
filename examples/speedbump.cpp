@@ -97,12 +97,13 @@ class Speedbump {
 
     void client_ordering2_req_handler(MsgOrdering2ReqCmd &&msg, const conn_t &conn) {
         const NetAddr addr = conn->get_addr();
-        auto cmd = parse_cmd(msg.serialized);
-        const auto &cmd_hash = cmd->get_hash();
+        uint256_t cmd_hash;
+        uint64_t timestamp;
+        msg.serialized >> cmd_hash >> timestamp;
         pending_resp[cmd_hash] = addr;
-        printf("Bump #%d forwarding2 %s\n", idx, std::string(*cmd).c_str());
+        printf("Bump #%d forwarding2 %s\n", idx, get_hex(cmd_hash).c_str());
         // Forward client request to one node
-        MsgOrdering2ReqCmd msg_forward(cmd_hash, msg.timestamp);
+        MsgOrdering2ReqCmd msg_forward(cmd_hash, timestamp);
         mn.send_msg(msg_forward, node_conn);
     }
 
