@@ -88,15 +88,15 @@ class Speedbump {
     //     num_forwarded++;
     // }
 
-    // void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
-    //     auto &fin = msg.fin;
-    //     const uint256_t &cmd_hash = fin.cmd_hash;
-    //     //printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
-    //     // Return nodes response back to client
-    //     NetAddr addr = pending_resp[cmd_hash];
-    //     cn.send_msg(MsgRespCmd(std::move(fin)), addr);
-    //     num_backwarded++;
-    // }
+    void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
+        auto &fin = msg.fin;
+        const uint256_t &cmd_hash = fin.cmd_hash;
+        //printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
+        // Return nodes response back to client
+        NetAddr addr = pending_resp[cmd_hash];
+        cn.send_msg(MsgRespCmd(std::move(fin)), addr);
+        num_backwarded++;
+    }
     
     void client_ordering1_req_handler(MsgReqCmd &&msg, const conn_t &conn) {
         const NetAddr addr = conn->get_addr();
@@ -109,7 +109,14 @@ class Speedbump {
         mn.send_msg(msg_forward, node_conn);
         num_forwarded++;
     }
-
+    void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
+        const uint256_t &cmd_hash = msg.cmd_hash;
+        //printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
+        // Return nodes response back to client
+        NetAddr addr = pending_resp[cmd_hash];
+        cn.send_msg(MsgOrdering1RespCmd(cmd_hash, msg.timestamp, msg.timestamp_us, msg.sig), addr);
+        num_backwarded++;        
+    }
 
 public:
     Speedbump(int idx,
@@ -123,7 +130,7 @@ public:
         cn(req_ec, clinet_config) {
 
         // Connect to node
-        //mn.reg_handler(salticidae::generic_bind(&Speedbump::client_resp_handler, this, _1, _2));
+        mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_resp_cmd_handler, this, _1, _2));
         mn.start();
         node_conn = mn.connect_sync(node_addr);
 
