@@ -104,7 +104,6 @@ class Speedbump {
         // Forward client request to one node
         MsgOrdering2ReqCmd msg_forward(cmd_hash, msg.timestamp);
         mn.send_msg(msg_forward, node_conn);
-        num_forwarded++;
     }
 
     void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::conn_t &) {
@@ -113,7 +112,14 @@ class Speedbump {
         // Return nodes response back to client
         NetAddr addr = pending_resp[cmd_hash];
         cn.send_msg(MsgOrdering2RespCmd(cmd_hash, msg.timestamp, msg.sig), addr);
-        num_backwarded++;        
+    }
+
+    void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Net::conn_t &) {
+        const uint256_t &cmd_hash = msg.cmd_hash;
+        //printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
+        // Return nodes response back to client
+        NetAddr addr = pending_resp[cmd_hash];
+        cn.send_msg(MsgConsensusRespClientCmd(cmd_hash), addr);
     }
 
 public:
@@ -130,6 +136,7 @@ public:
         // Connect to node
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_resp_cmd_handler, this, _1, _2));
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering2_resp_cmd_handler, this, _1, _2));
+        mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering_exec_resp_handler, this, _1, _2));
         mn.start();
         node_conn = mn.connect_sync(node_addr);
 
