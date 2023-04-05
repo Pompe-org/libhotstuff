@@ -129,11 +129,14 @@ public:
 
         // Connect to node
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_resp_cmd_handler, this, _1, _2));
+        mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering2_resp_cmd_handler, this, _1, _2));
         mn.start();
         node_conn = mn.connect_sync(node_addr);
 
         // Connect to client
         cn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_req_handler, this, _1, _2));
+        cn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering2_req_handler, this, _1, _2));
+
         cn.start();
         cn.listen(clisten_addr);
 
