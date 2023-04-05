@@ -35,8 +35,6 @@ using hotstuff::opcode_t;
 using hotstuff::bytearray_t;
 using hotstuff::DataStream;
 using hotstuff::ReplicaID;
-using hotstuff::MsgReqCmd;
-using hotstuff::MsgRespCmd;
 using hotstuff::get_hash;
 using hotstuff::promise_t;
 
@@ -75,30 +73,8 @@ class Speedbump {
         s >> *cmd;
         return cmd;
     }
-
-    // void client_req_handler(MsgReqCmd &&msg, const conn_t &conn) {
-    //     const NetAddr addr = conn->get_addr();
-    //     auto cmd = parse_cmd(msg.serialized);
-    //     const auto &cmd_hash = cmd->get_hash();
-    //     pending_resp[cmd_hash] = addr;
-    //     //printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
-    //     // Forward client request to one node
-    //     MsgReqCmd msg_forward(*cmd);
-    //     mn.send_msg(msg_forward, node_conn);
-    //     num_forwarded++;
-    // }
-
-    void client_resp_handler(MsgRespCmd &&msg, const conn_t &) {
-        auto &fin = msg.fin;
-        const uint256_t &cmd_hash = fin.cmd_hash;
-        //printf("Bump #%d returns %s\n", idx, get_hex(cmd_hash).c_str());
-        // Return nodes response back to client
-        NetAddr addr = pending_resp[cmd_hash];
-        cn.send_msg(MsgRespCmd(std::move(fin)), addr);
-        num_backwarded++;
-    }
     
-    void client_ordering1_req_handler(MsgReqCmd &&msg, const conn_t &conn) {
+    void client_ordering1_req_handler(MsgOrdering1ReqCmd &&msg, const conn_t &conn) {
         const NetAddr addr = conn->get_addr();
         auto cmd = parse_cmd(msg.serialized);
         const auto &cmd_hash = cmd->get_hash();
