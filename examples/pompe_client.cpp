@@ -96,7 +96,7 @@ void connect_all() {
 
 static int debug_limit = 0;
 bool try_send(bool check = true) {
-    if (debug_limit++ > 5) return false;
+    if (debug_limit++ > 10) return false;
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
