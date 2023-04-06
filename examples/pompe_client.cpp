@@ -84,7 +84,7 @@ int count_sent, count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
-std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
+std::unordered_map<const uint256_t, Request> waiting, finished, waiting_exec;
 std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
@@ -202,6 +202,7 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     // for debug
     //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), std::string(get_hex10(msg.timestamp)).c_str());
 #endif
+    finished.insert(std::make_pair(it->first, it->second));
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
 
@@ -314,6 +315,15 @@ int main(int argc, char **argv) {
     //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
+
+    int print_total = 0;
+    for (auto it : finished) {
+        int64_t invocation = it.second.invocation_time_us;
+        std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
+        for (auto t : it.second.timestamps)
+            printf("%ld\t%ld\t%ld\t%ld\n", (int64_t)t - invocation);
+        if (print_total > 10) break;
+    }
     
     freopen(execlogfile.c_str(), "w", stdout);
 
