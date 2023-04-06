@@ -64,8 +64,18 @@ struct Request {
     salticidae::ElapsedTime et;
     salticidae::ElapsedTime et_exec;
     //    std::vector<std::string> timestamps;
+    uint64_t invocation_time_us;
     std::vector<uint64_t> timestamps;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
+    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
+    {
+        et.start();
+        et_exec.start();
+        struct timeval tv;
+        gettimeofday(&tv, nullptr);
+        invocation_time_us = tv.tv_sec;
+        invocation_time_us *= 1000 * 1000;
+        invocation_time_us += tv.tv_usec;
+    }
 };
 
 int BATCH_SIZE, STABLE_PERIOD;
