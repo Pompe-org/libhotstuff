@@ -320,9 +320,9 @@ int main(int argc, char **argv) {
     for (auto it : finished) {
         int64_t invocation = it.second.invocation_time_us;
         std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
+        printf("\n######################\n");
         for (auto t : it.second.timestamps)
-            printf("%ld = %ld - %ld\t", (int64_t)t - invocation, t, invocation);
-        printf("\n");
+            printf("    %ld (%ld - %ld)\t", (int64_t)t - invocation, t, invocation);
         if (print_total++ > 10) break;
     }
     
