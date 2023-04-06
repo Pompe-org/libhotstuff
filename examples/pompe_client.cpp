@@ -68,13 +68,13 @@ struct Request {
     std::vector<uint64_t> timestamps;
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
-        et.start();
-        et_exec.start();
         struct timeval tv;
         gettimeofday(&tv, nullptr);
         invocation_time_us = tv.tv_sec;
         invocation_time_us *= 1000 * 1000;
         invocation_time_us += tv.tv_usec;
+        et.start();
+        et_exec.start();
     }
 };
 
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
         std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
         printf("######################\n");
         for (auto t : it.second.timestamps)
-            printf("    %ld (%ld - %ld)\n", (int64_t)t - invocation, t, invocation);
+            printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
         if (print_total++ > 10) break;
     }
     
