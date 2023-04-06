@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
     auto opt_clinworker = Config::OptValInt::create(8);
     auto opt_cliburst = Config::OptValInt::create(1000);
     auto opt_client_port = Config::OptValInt::create(-1);
-    auto opt_max_cli_msg = Config::OptValInt::create(65536); // 64K by default
+    auto opt_max_cli_msg = Config::OptValInt::create(65536000); // 64K by default
 
     config_bump.add_opt("idx", opt_idx, Config::SET_VAL, 'i', "specify the index in the replica list");
     config_bump.add_opt("replica", opt_bumps, Config::APPEND, 'a', "add an replica to the list");
