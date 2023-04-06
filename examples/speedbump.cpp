@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <sys/time.h>
 
 #include "salticidae/stream.h"
 #include "salticidae/util.h"
@@ -80,7 +81,10 @@ class Speedbump {
             auto cmd = parse_cmd(msg.serialized);
             const auto &cmd_hash = cmd->get_hash();
             pending_resp[cmd_hash] = addr;
-            //printf("Bump #%d forwarding1 %s\n", idx, std::string(*cmd).c_str());
+
+            struct timeval tv;
+            gettimeofday(&tv, nullptr);
+            printf("Bump #%d forwarding1 %s at %ld:%ld\n", idx, std::string(*cmd).c_str(), tv.tv_sec, tv.tv_usec);
             // Forward client request to one node
             MsgOrdering1ReqCmd msg_forward(*cmd);
             mn.send_msg(msg_forward, node_conn);
@@ -93,7 +97,9 @@ class Speedbump {
     void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
         try {
             const uint256_t &cmd_hash = msg.cmd_hash;
-            //printf("Bump #%d returns1 %s\n", idx, get_hex(cmd_hash).c_str());
+            struct timeval tv;
+            gettimeofday(&tv, nullptr);
+            printf("Bump #%d returns1 %s at %ld:%ld\n", idx, get_hex(cmd_hash).c_str(), tv.tv_sec, tv.tv_usec);
             // Return nodes response back to client
             NetAddr addr = pending_resp[cmd_hash];
             cn.send_msg(MsgOrdering1RespCmd(cmd_hash, msg.timestamp, msg.timestamp_us, msg.sig), addr);
