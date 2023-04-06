@@ -94,9 +94,9 @@ void connect_all() {
         conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
 }
 
-//static int debug_limit = 0;
+static int debug_limit = 0;
 bool try_send(bool check = true) {
-    //if (debug_limit++ > 5) return false;
+    if (debug_limit++ > 5) return false;
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    int print_total = 0;
+    int print_total(0);
     for (auto it : finished) {
         int64_t invocation = it.second.invocation_time_us;
         std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
