@@ -321,8 +321,9 @@ int main(int argc, char **argv) {
         int64_t invocation = it.second.invocation_time_us;
         std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
         for (auto t : it.second.timestamps)
-            printf("%ld\t%ld\t%ld\t%ld\n", (int64_t)t - invocation);
-        if (print_total > 10) break;
+            printf("%ld = %ld - %ld\t", (int64_t)t - invocation, t, invocation);
+        printf("\n");
+        if (print_total++ > 10) break;
     }
     
     freopen(execlogfile.c_str(), "w", stdout);
