@@ -176,10 +176,13 @@ public:
 
     void stop() {
         printf("[DEBUG] Bump #%d order(forward=%d, backward=%d) exec(backward=%d)\n", idx, num_order_forwarded, num_order_backwarded, num_exec_backwarded);
-        req_ec.stop();
-        resp_ec.stop();
-        //req_thread.join();
-        ec.stop();
+        try {
+            req_ec.stop();
+            resp_ec.stop();
+            //req_thread.join();
+            ec.stop();
+        } catch (...) {
+        }
     }
 };
 
