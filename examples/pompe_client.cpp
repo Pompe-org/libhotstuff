@@ -317,11 +317,11 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    int print_total(0);
+    int print_total(0), finished_len = finished.size();
     for (auto it : finished) {
         int64_t invocation = it.invocation_time_us;
         std::sort(it.timestamps.begin(), it.timestamps.end());
-        printf("######################\n");
+        printf("##########%d/%d##########\n", print_total, finished_len);
         for (auto t : it.timestamps)
             printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
         if (print_total++ > 10) break;
