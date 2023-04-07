@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    int finished_len = finished.size() * 9 / 10;
+    int finished_len = 100; // Get statistics of the first 100 invocations
     std::vector<int64_t> results(4); // Assume 4 nodes
     for (int i = 0; i < finished_len; i++) {
         int64_t invocation = finished[i].invocation_time_us;
