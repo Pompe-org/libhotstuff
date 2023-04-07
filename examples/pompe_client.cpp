@@ -317,14 +317,19 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    int print_total(0), finished_len = finished.size();
-    for (auto it : finished) {
-        int64_t invocation = it.invocation_time_us;
-        std::sort(it.timestamps.begin(), it.timestamps.end());
-        printf("##########%d/%d##########\n", print_total, finished_len);
-        for (auto t : it.timestamps)
-            printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
-        if (print_total++ > 10) break;
+    int finished_len = finished.size() * 9 / 10;
+    std::vector<int64_t> results(4); // Assume 4 nodes
+    for (int i = 0; i < finished_len; i++) {
+        int64_t invocation = finished[i].invocation_time_us;
+        std::sort(finished[i].timestamps.begin(), finished[i].timestamps.end());
+        for (int j = 0; j < finished[i].timestamps.size(); j++)
+            results[j] += finished[i].timestamps[j] - invocation;
+            //printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
+    }
+    printf("Preferences from the first %d invocations\n", finished_len);
+    for (auto it : results) {
+        int64_t delta = it / finished_len;
+        printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
     
     freopen(execlogfile.c_str(), "w", stdout);
