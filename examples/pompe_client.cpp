@@ -84,7 +84,8 @@ int count_sent, count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
-std::unordered_map<const uint256_t, Request> waiting, finished, waiting_exec;
+std::vector<Request> finished;
+std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
@@ -202,7 +203,7 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     // for debug
     //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), std::string(get_hex10(msg.timestamp)).c_str());
 #endif
-    finished.insert(std::make_pair(it->first, it->second));
+    finished.push_back(it->second);
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
 
@@ -318,10 +319,10 @@ int main(int argc, char **argv) {
 
     int print_total(0);
     for (auto it : finished) {
-        int64_t invocation = it.second.invocation_time_us;
-        std::sort(it.second.timestamps.begin(), it.second.timestamps.end());
+        int64_t invocation = it.invocation_time_us;
+        std::sort(it.timestamps.begin(), it.timestamps.end());
         printf("######################\n");
-        for (auto t : it.second.timestamps)
+        for (auto t : it.timestamps)
             printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
         if (print_total++ > 10) break;
     }
