@@ -345,7 +345,7 @@ int main(int argc, char **argv) {
     
     freopen(orderlogfile.c_str(), "w", stdout);
 
-    for (int i = 0; i < finished_len; i++) {
+    for (int i = 0; i < finished.size(); i++) {
         int64_t invocation = finished[i].invocation_time_us;
         for (int j = 0; j < finished[i].timestamps.size(); j++)
             printf("%ld    ", (int64_t)finished[i].timestamps[j] - invocation);
