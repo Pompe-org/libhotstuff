@@ -345,13 +345,19 @@ int main(int argc, char **argv) {
     
     freopen(orderlogfile.c_str(), "w", stdout);
 
-    for (const auto &e: elapsed)
-    {
-        char fmt[64];
-        struct tm *tmp = localtime(&e.first.tv_sec);
-        strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
-        fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    for (int i = 0; i < finished_len; i++) {
+        int64_t invocation = finished[i].invocation_time_us;
+        for (int j = 0; j < finished[i].timestamps.size(); j++)
+            printf("%ld    ", (int64_t)finished[i].timestamps[j] - invocation);
+        printf("\n");
     }
+    // for (const auto &e: elapsed)
+    // {
+    //     char fmt[64];
+    //     struct tm *tmp = localtime(&e.first.tv_sec);
+    //     strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
+    //     fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    // }
 
 
     fclose(stdout);
