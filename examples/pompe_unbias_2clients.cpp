@@ -95,6 +95,12 @@ void connect_all() {
         conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
 }
 
+void connect_all_strong() {
+    for (size_t i = 0; i < strong_replicas.size(); i++)
+        conns.insert(std::make_pair(i, mn.connect_sync(strong_replicas[i])));
+}
+
+
 //static int debug_limit = 0;
 bool try_send(bool check = true) {
     //if (debug_limit++ > 10) return false;
@@ -237,7 +243,6 @@ int main(int argc, char **argv) {
             throw HotStuffError("format error");
         raw_strong.push_back(res[0]);
     }
-
     for (const auto &p: raw_strong)
     {
         auto _p = split_ip_port_cport(p);
@@ -245,6 +250,7 @@ int main(int argc, char **argv) {
         strong_replicas.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
         //printf("Pompe-unbias-client: strong bump %s\n", _p.first.c_str());
     }
+    connect_all_strong();
 
     // Parse speedbumps for the weak client and other configuration
     Config config(argv[1]);
