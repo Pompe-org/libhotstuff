@@ -114,6 +114,7 @@ void connect_all_strong() {
 bool try_send(bool check = true) {
     //if (debug_limit++ > 10) return false;
 
+    printf("[TMP] client  in try_send\n");
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
