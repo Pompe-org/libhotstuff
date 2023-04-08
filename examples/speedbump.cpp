@@ -94,6 +94,7 @@ class Speedbump {
 
     void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
         try {
+            printf("[TMP] speedbump sends EstConnResp for %s\n", std::string(get_hex10(msg.cmd_hash)).c_str());
             const uint256_t &cmd_hash = msg.cmd_hash;
             NetAddr addr = pending_resp[cmd_hash];
             cn.send_msg(MsgEstConnRespCmd(cmd_hash, msg.timestamp_us), addr);
