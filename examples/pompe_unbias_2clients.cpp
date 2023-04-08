@@ -83,7 +83,7 @@ const int max_waiting_exec = 500;
 int count_sent, count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
-std::unordered_map<ReplicaID, Net::conn_t> conns;
+std::unordered_map<ReplicaID, Net::conn_t> weak_conns;
 std::unordered_map<ReplicaID, Net::conn_t> strong_conns;
 std::vector<Request> finished;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
@@ -93,7 +93,7 @@ Net mn(ec, Net::Config());
 
 void connect_all() {
     for (size_t i = 0; i < replicas.size(); i++)
-        conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
+        weak_conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
 }
 
 void connect_all_strong() {
@@ -122,7 +122,7 @@ bool try_send(bool check = true) {
         //for (auto &p: conns) mn.send_msg(msg, p.second);
         
         for (int i = 0; i < BATCH_SIZE; i++) {
-            for (auto &p: conns) mn.send_msg(msg, p.second);
+            for (auto &p: weak_conns) mn.send_msg(msg, p.second);
         }
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
@@ -156,7 +156,7 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     // send the second rtt message of ordering phase
     // printf("here1\n");
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
-    for (auto &p: conns) {
+    for (auto &p: weak_conns) {
         mn.send_msg(next_msg, p.second);
     }
 }
