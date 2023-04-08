@@ -130,29 +130,6 @@ bool try_send(bool check = true) {
     return false;
 }
 
-void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
-    auto &fin = msg.fin;
-    HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
-    const uint256_t &cmd_hash = fin.cmd_hash;
-    auto it = waiting.find(cmd_hash);
-    auto &et = it->second.et;
-    if (it == waiting.end()) return;
-
-    if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
-    et.stop();
-
-#ifndef HOTSTUFF_ENABLE_BENCHMARK
-    HOTSTUFF_LOG_INFO("got %s, wall: %.3f, cpu: %.3f",
-                        std::string(fin).c_str(),
-                        et.elapsed_sec, et.cpu_elapsed_sec);
-#else
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    elapsed.push_back(std::make_pair(tv, et.elapsed_sec));
-#endif
-    waiting.erase(it);
-    while (try_send());
-}
 
 void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
@@ -289,7 +266,6 @@ int main(int argc, char **argv) {
     ev_sigint.add(SIGINT);
     ev_sigterm.add(SIGTERM);
 
-    //mn.reg_handler(client_resp_cmd_handler);
     mn.reg_handler(client_ordering1_resp_cmd_handler);
     mn.reg_handler(client_ordering2_resp_cmd_handler);
     mn.reg_handler(client_ordering_exec_resp_handler);
