@@ -83,8 +83,6 @@ class Speedbump {
             auto cmd = parse_cmd(msg.serialized);
             const auto &cmd_hash = cmd->get_hash();
             pending_resp[cmd_hash] = addr;
-            printf("[TMP] speedbump forwards EstConnReq for %s\n", std::string(get_hex10(cmd_hash)).c_str());
-
             MsgEstConnReqCmd msg_forward(*cmd);
             mn.send_msg(msg_forward, node_conn);
             num_order_forwarded++;
@@ -96,7 +94,7 @@ class Speedbump {
     void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
         try {
             const uint256_t &cmd_hash = msg.cmd_hash;
-            printf("[TMP] speedbump backwards EstConnResp for %s\n", std::string(get_hex10(cmd_hash)).c_str());
+            printf("[TMP] speedbump backwards EstConnResp for %s, %ld\n", std::string(get_hex10(cmd_hash)).c_str(), msg.timestamp_us);
             NetAddr addr = pending_resp[cmd_hash];
             cn.send_msg(MsgEstConnRespCmd(cmd_hash, msg.timestamp_us), addr);
             num_order_backwarded++;
