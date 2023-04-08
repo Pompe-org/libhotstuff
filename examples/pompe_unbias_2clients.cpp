@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
             results[j] += finished[i].timestamps[j] - invocation;
             //printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
     }
-    printf("Pompe-unbias-client: Average preferences from the first %d invocations\n", finished_len);
+    printf("Pompe-unbias-2clients: Average preferences from the first %d invocations\n", finished_len);
     for (auto it : results) {
         int64_t delta = it / finished_len;
         printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
