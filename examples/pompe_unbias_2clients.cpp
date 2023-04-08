@@ -61,6 +61,7 @@ uint32_t nfaulty;
 struct Request {
     command_t cmd;
     size_t confirmed;
+    size_t estconn_rtt;
     size_t ordering_rtt1;
     size_t ordering_rtt2;
     size_t ordering_rtt3;
@@ -146,16 +147,15 @@ bool try_send(bool check = true) {
 }
 
 void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
-    printf("[TMP] receive EstConnResp for %s\n", std::string(get_hex10(msg.cmd_hash)).c_str());
+    //printf("[TMP] receive EstConnResp for %s\n", std::string(get_hex10(msg.cmd_hash)).c_str());
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting.find(cmd_hash);
     if (it == waiting.end()) return;
-    auto &et = it->second.et;    
 
     //std::string t = std::string(get_hex10(msg.timestamp));
     it->second.conn_timestamps.push_back(msg.timestamp_us);
-    if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // barrier for connection establishment
+    if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
     
     // send the first rtt message of ordering phase
     it->second.invoke(); // get invocation time
