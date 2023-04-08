@@ -250,7 +250,6 @@ int main(int argc, char **argv) {
         strong_replicas.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
         //printf("Pompe-unbias-client: strong bump %s\n", _p.first.c_str());
     }
-    connect_all_strong();
 
     // Parse speedbumps for the weak client and other configuration
     Config config(argv[1]);
@@ -313,6 +312,8 @@ int main(int argc, char **argv) {
     nfaulty = (replicas.size() - 1) / 3;
     HOTSTUFF_LOG_INFO("nfaulty = %zu", nfaulty);
     connect_all();
+    connect_all_strong();
+
     while (try_send());
     ec.dispatch();
 

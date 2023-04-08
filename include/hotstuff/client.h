@@ -50,6 +50,28 @@ struct MsgRespCmd {
     }
 };
 
+struct MsgConnEstReqCmd {
+    static const opcode_t opcode = 0xe;
+    DataStream serialized;
+    command_t cmd;
+    MsgConnEstReqCmd(const Command &cmd) { serialized << cmd; }
+    MsgConnEstReqCmd(DataStream &&s): serialized(std::move(s)) {}
+};
+
+struct MsgConnEstRespCmd {
+    static const opcode_t opcode = 0xf;
+    DataStream serialized;
+    uint256_t cmd_hash;
+    uint64_t timestamp_us;
+
+    MsgConnEstRespCmd(const uint256_t &cmd_hash, const uint256_t &timestamp, const uint64_t timestamp_us, const SigSecp256k1 &sig) {
+        serialized << cmd_hash << timestamp_us;
+    }
+    MsgConnEstRespCmd(DataStream &&s) {
+        s >> cmd_hash >> timestamp_us;
+    }
+};
+
 struct MsgOrdering1ReqCmd {
     static const opcode_t opcode = 0x9;
     DataStream serialized;
