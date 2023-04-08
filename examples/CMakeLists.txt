@@ -34,8 +34,8 @@ target_link_libraries(pompe-app hotstuff_static)
 add_executable(pompe-client pompe_client.cpp)
 target_link_libraries(pompe-client hotstuff_static)
 
-add_executable(pompe-unbias-client pompe_unbias_client.cpp)
-target_link_libraries(pompe-unbias-client hotstuff_static)
+add_executable(pompe-unbias-2clients pompe_unbias_2clients.cpp)
+target_link_libraries(pompe-unbias-2clients hotstuff_static)
 
 add_executable(speedbump speedbump.cpp)
 target_link_libraries(speedbump hotstuff_static)
