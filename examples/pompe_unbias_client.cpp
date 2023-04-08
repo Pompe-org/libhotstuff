@@ -248,8 +248,9 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 
 int main(int argc, char **argv) {
     Config config(argv[1]);
-    std::string orderlogfile(argv[2]);
-    std::string execlogfile(argv[3]);
+    Config config_strong(argv[2]);
+    std::string orderlogfile(argv[3]);
+    std::string execlogfile(argv[4]);
     //Config config("hotstuff.conf");
 
     auto opt_blk_size = Config::OptValInt::create(1);
