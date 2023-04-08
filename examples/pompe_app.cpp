@@ -439,7 +439,6 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
         while (q.try_dequeue(p))
         {
             try {
-                printf("[TMP] in estconn_queue.reg_handler, pompe_app.cpp");
                 cn.send_msg(MsgEstConnRespCmd(p.first.cmd_hash, p.first.timestamp_us), p.second);
             } catch (std::exception &err) {
                 //HOTSTUFF_LOG_WARN("unable to send MsgEstConnRespCmd to the client: %s", err.what());
@@ -533,7 +532,6 @@ void HotStuffApp::client_estconn_request_cmd_handler(MsgEstConnReqCmd &&msg, con
     if (batch_received[cmd_hash] < clnt_blk_size)
         return;
 
-    printf("[TMP] in client_estconn_request_cmd_handler, pompe_app.cpp");
     exec_estconn(cmd_hash, [this, addr](EstConnFinality fin) {
         estconn_queue.enqueue(std::make_pair(fin, addr));
     });
