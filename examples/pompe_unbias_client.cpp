@@ -249,6 +249,10 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 int main(int argc, char **argv) {
     Config config(argv[1]);
     Config config_strong(argv[2]);
+    auto opt_strong_replicas = Config::OptValStrVec::create();
+    config_strong.add_opt("replica", opt_strong_replicas, Config::APPEND);
+    config_strong.parse(argc, argv);
+
     std::string orderlogfile(argv[3]);
     std::string execlogfile(argv[4]);
     //Config config("hotstuff.conf");
