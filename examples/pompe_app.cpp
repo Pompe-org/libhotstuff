@@ -53,6 +53,7 @@ using hotstuff::NetAddr;
 using hotstuff::HotStuffError;
 using hotstuff::CommandDummy;
 using hotstuff::Finality;
+using hotstuff::EstConnFinality;
 using hotstuff::Ordering1Finality;
 using hotstuff::Ordering2Finality;
 using hotstuff::command_t;
@@ -62,6 +63,8 @@ using hotstuff::bytearray_t;
 using hotstuff::DataStream;
 using hotstuff::ReplicaID;
 using hotstuff::MsgReqCmd;
+using hotstuff::MsgEstConnReqCmd;
+using hotstuff::MsgEstConnRespCmd;
 using hotstuff::MsgOrdering1ReqCmd;
 using hotstuff::MsgOrdering1RespCmd;
 using hotstuff::MsgOrdering2ReqCmd;
@@ -107,6 +110,7 @@ class HotStuffApp: public HotStuff {
 
     using conn_t = ClientNetwork<opcode_t>::conn_t;
     using resp_queue_t = salticidae::MPSCQueueEventDriven<std::pair<Finality, NetAddr>>;
+    using estconn_resp_queue_t = salticidae::MPSCQueueEventDriven<std::pair<EstConnFinality, NetAddr>>;
     using ordering1_resp_queue_t = salticidae::MPSCQueueEventDriven<std::pair<Ordering1Finality, NetAddr>>;
     using ordering2_resp_queue_t = salticidae::MPSCQueueEventDriven<std::pair<Ordering2Finality, NetAddr>>;
     using consensus_resp_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, NetAddr>>;
@@ -116,6 +120,7 @@ class HotStuffApp: public HotStuff {
     std::thread req_thread;
     std::thread resp_thread;
     resp_queue_t resp_queue;
+    estconn_resp_queue_t estconn_queue;
     ordering1_resp_queue_t ordering1_queue;
     ordering2_resp_queue_t ordering2_queue;
     consensus_resp_queue_t consensus_queue;
@@ -123,6 +128,7 @@ class HotStuffApp: public HotStuff {
     salticidae::BoxObj<salticidae::ThreadCall> req_tcall;
 
     void client_request_cmd_handler(MsgReqCmd &&, const conn_t &);
+    void client_estconn_request_cmd_handler(MsgEstConnReqCmd &&, const conn_t &);
     void client_ordering1_request_cmd_handler(MsgOrdering1ReqCmd &&, const conn_t &);
     void client_ordering2_request_cmd_handler(MsgOrdering2ReqCmd &&, const conn_t &);
     void client_ordering_exec_reply_handler(MsgRespCmd &&, const conn_t &);
@@ -428,6 +434,20 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
         return false;
     });
 
+    estconn_queue.reg_handler(resp_ec, [this](estconn_resp_queue_t &q) {
+        std::pair<EstConnFinality, NetAddr> p;
+        while (q.try_dequeue(p))
+        {
+            try {
+                cn.send_msg(MsgEstConnRespCmd(p.first.cmd_hash, p.first.timestamp, p.first.timestamp_us, p.first.sig), p.second);
+            } catch (std::exception &err) {
+                //HOTSTUFF_LOG_WARN("unable to send MsgEstConnRespCmd to the client: %s", err.what());
+            }
+            return true;
+        }
+        return false;
+    });
+
     ordering1_queue.reg_handler(resp_ec, [this](ordering1_resp_queue_t &q) {
         std::pair<Ordering1Finality, NetAddr> p;
         while (q.try_dequeue(p))
@@ -476,6 +496,8 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
     /* register the handlers for msg from clients */
     cn.reg_handler(salticidae::generic_bind(&HotStuffApp::client_request_cmd_handler, this, _1, _2));
 
+    cn.reg_handler(salticidae::generic_bind(&HotStuffApp::client_estconn_request_cmd_handler, this, _1, _2));
+
     cn.reg_handler(salticidae::generic_bind(&HotStuffApp::client_ordering1_request_cmd_handler, this, _1, _2));
 
     cn.reg_handler(salticidae::generic_bind(&HotStuffApp::client_ordering2_request_cmd_handler, this, _1, _2));
@@ -493,6 +515,28 @@ void HotStuffApp::client_request_cmd_handler(MsgReqCmd &&msg, const conn_t &conn
         resp_queue.enqueue(std::make_pair(fin, addr));
     });
 }
+
+void HotStuffApp::client_estconn_request_cmd_handler(MsgEstConnReqCmd &&msg, const conn_t &conn) {    
+    const NetAddr addr = conn->get_addr();
+    auto cmd = parse_cmd(msg.serialized);
+    const auto &cmd_hash = cmd->get_hash();
+
+    if (batch_received.count(cmd_hash)) {
+        // already in batch
+        batch_received[cmd_hash]++;
+    } else {
+        // new in batch
+        batch_received[cmd_hash] = 1;
+    }
+
+    if (batch_received[cmd_hash] < clnt_blk_size)
+        return;
+    
+    exec_estconn(cmd_hash, [this, addr](EstConnFinality fin) {
+        estconn_queue.enqueue(std::make_pair(fin, addr));
+    });
+}
+
 
 void HotStuffApp::client_ordering1_request_cmd_handler(MsgOrdering1ReqCmd &&msg, const conn_t &conn) {    
     const NetAddr addr = conn->get_addr();

@@ -35,6 +35,9 @@ using hotstuff::ReplicaID;
 using hotstuff::NetAddr;
 using hotstuff::EventContext;
 //using hotstuff::MsgReqCmd;
+using hotstuff::MsgEstConnReqCmd;
+using hotstuff::MsgEstConnRespCmd;
+
 using hotstuff::MsgOrdering1ReqCmd;
 using hotstuff::MsgOrdering2ReqCmd;
 using hotstuff::MsgRespCmd;
@@ -66,15 +69,19 @@ struct Request {
     //    std::vector<std::string> timestamps;
     uint64_t invocation_time_us;
     std::vector<uint64_t> timestamps;
+    std::vector<uint64_t> conn_timestamps;
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
+        et.start();
+        et_exec.start();
+    }
+
+    void invoke() {
         struct timeval tv;
         gettimeofday(&tv, nullptr);
         invocation_time_us = tv.tv_sec;
         invocation_time_us *= 1000 * 1000;
         invocation_time_us += tv.tv_usec;
-        et.start();
-        et_exec.start();
     }
 };
 
@@ -118,7 +125,8 @@ bool try_send(bool check = true) {
         // count_sent++;
 
         auto cmd = new CommandDummy(cid, cnt++);
-        MsgOrdering1ReqCmd msg(*cmd);
+        //MsgOrdering1ReqCmd msg(*cmd);
+        MsgEstConnReqCmd msg(*cmd);
         //for (auto &p: conns) mn.send_msg(msg, p.second);
         
         for (int i = 0; i < BATCH_SIZE; i++) {
@@ -137,6 +145,24 @@ bool try_send(bool check = true) {
     return false;
 }
 
+void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
+    //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
+    const uint256_t &cmd_hash = msg.cmd_hash;
+    auto it = waiting.find(cmd_hash);
+    if (it == waiting.end()) return;
+    auto &et = it->second.et;    
+
+    //std::string t = std::string(get_hex10(msg.timestamp));
+    it->second.conn_timestamps.push_back(msg.timestamp_us);
+    if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // barrier for connection establishment
+    
+    // send the first rtt message of ordering phase
+    it->second.invoke(); // get invocation time
+    MsgOrdering1ReqCmd next_msg(*it->second.cmd);
+    for (auto &p: weak_conns) {
+        mn.send_msg(next_msg, p.second);
+    }
+}
 
 void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
@@ -154,7 +180,6 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     uint64_t median = it->second.timestamps[nfaulty + 1];
     
     // send the second rtt message of ordering phase
-    // printf("here1\n");
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
     for (auto &p: weak_conns) {
         mn.send_msg(next_msg, p.second);
@@ -272,6 +297,7 @@ int main(int argc, char **argv) {
     ev_sigint.add(SIGINT);
     ev_sigterm.add(SIGTERM);
 
+    mn.reg_handler(client_estconn_resp_cmd_handler);
     mn.reg_handler(client_ordering1_resp_cmd_handler);
     mn.reg_handler(client_ordering2_resp_cmd_handler);
     mn.reg_handler(client_ordering_exec_resp_handler);

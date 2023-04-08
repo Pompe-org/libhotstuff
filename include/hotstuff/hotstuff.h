@@ -200,6 +200,7 @@ class HotStuffBase: public HotStuffCore {
 
     using Net = PeerNetwork<opcode_t>;
     using commit_cb_t = std::function<void(const Finality &)>;
+    using estconn_cb_t = std::function<void(const EstConnFinality &)>;
     using ordering1_cb_t = std::function<void(const Ordering1Finality &)>;
     using ordering2_cb_t = std::function<void(const Ordering2Finality &)>;
     using consensus_cb_t = std::function<void(const uint256_t &, const NetAddr&)>;
@@ -231,12 +232,14 @@ class HotStuffBase: public HotStuffCore {
     std::unordered_map<const uint256_t, commit_cb_t> decision_waiting;
     std::unordered_map<const uint256_t, uint32_t> decision_made;
     using cmd_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, commit_cb_t>>;
+    using estconn_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, estconn_cb_t>>;
     using ordering1_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, ordering1_cb_t>>;
     using ordering2_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, ordering2_cb_t>>;
     using consensus_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint64_t, consensus_cb_t>>;
     using consensus_nonleader_queue_t = salticidae::MPSCQueueEventDriven<MsgConsensusReqCmd>;
 
     cmd_queue_t cmd_pending;
+    estconn_queue_t estconn;
     ordering1_queue_t ordering1;
     ordering2_queue_t ordering2;
     consensus_queue_t consensus;
@@ -303,6 +306,7 @@ class HotStuffBase: public HotStuffCore {
 
     /* Submit the command to be decided. */
     void exec_command(uint256_t cmd_hash, commit_cb_t callback);
+    void exec_estconn(uint256_t cmd_hash, estconn_cb_t callback);
     void exec_ordering1(uint256_t cmd_hash, ordering1_cb_t callback);
     void exec_ordering2(uint256_t cmd_hash, ordering2_cb_t callback);
     void exec_consensus(uint64_t timestamp, consensus_cb_t callback);

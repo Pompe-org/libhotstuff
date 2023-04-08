@@ -114,6 +114,10 @@ void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
 }
 
+void HotStuffBase::exec_estconn(uint256_t cmd_hash, estconn_cb_t callback){
+    estconn.enqueue(std::make_pair(cmd_hash, callback));
+}
+
 void HotStuffBase::exec_ordering1(uint256_t cmd_hash, ordering1_cb_t callback){
     ordering1.enqueue(std::make_pair(cmd_hash, callback));
 }
@@ -716,8 +720,8 @@ void HotStuffBase::start(
         return false;
     });
 
-     ordering1.reg_handler(ec, [this](ordering1_queue_t &q) {
-         std::pair<uint256_t, ordering1_cb_t> e;
+     estconn.reg_handler(ec, [this](estconn_queue_t &q) {
+         std::pair<uint256_t, estconn_cb_t> e;
          
          while (q.try_dequeue(e))
          {
@@ -738,10 +742,39 @@ void HotStuffBase::start(
              DataStream s;
              sig.serialize(s);
 
-             e.second(Ordering1Finality(e.first, timestamp, timestamp_us, sig));
+             e.second(EstConnFinality(e.first, timestamp, timestamp_us, sig));
              return true;
          }
          return false;
+    });
+
+
+    ordering1.reg_handler(ec, [this](ordering1_queue_t &q) {
+        std::pair<uint256_t, ordering1_cb_t> e;
+         
+        while (q.try_dequeue(e))
+            {
+                // assgin timestamp
+                struct timeval tv;
+                gettimeofday(&tv, nullptr);
+                uint64_t timestamp_us = tv.tv_sec;
+                timestamp_us *= 1000 * 1000;
+                timestamp_us += tv.tv_usec;
+
+                // encrypt timestamp
+                // a dummy implementation using a fixed crypto key
+                PrivKeySecp256k1 p;
+                p.from_hex("4aede145d13021fb43c938bced67511a7740c05786d3e0b94ffbdaa7f15afc57");
+                uint8_t timestamp[32] = "0";
+                *((uint64_t*)timestamp) = timestamp_us;
+                SigSecp256k1 sig(timestamp, p);
+                DataStream s;
+                sig.serialize(s);
+
+                e.second(Ordering1Finality(e.first, timestamp, timestamp_us, sig));
+                return true;
+            }
+        return false;
     });
 
 
