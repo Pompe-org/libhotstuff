@@ -133,6 +133,9 @@ bool try_send(bool check = true) {
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg, p.second);
         }
+
+        printf("[TMP] client sends EstConnReq for %.10s\n", get_hex(cmd->get_hash()).c_str());
+
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
                             get_hex(cmd->get_hash()).c_str());
