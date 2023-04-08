@@ -86,7 +86,7 @@ using Net = salticidae::MsgNetwork<opcode_t>;
 std::unordered_map<ReplicaID, Net::conn_t> conns;
 std::vector<Request> finished;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
-std::vector<NetAddr> replicas;
+std::vector<NetAddr> replicas, strong_replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
 
@@ -247,12 +247,30 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 }
 
 int main(int argc, char **argv) {
-    Config config(argv[1]);
+    // Parse speedbumps for the strong client
     Config config_strong(argv[2]);
     auto opt_strong_replicas = Config::OptValStrVec::create();
     config_strong.add_opt("replica", opt_strong_replicas, Config::APPEND);
-    config_strong.parse(argc, argv);
+    config_strong.parse(1, argv);
+    std::vector<std::string> raw_strong;
+    for (const auto &s: opt_strong_replicas->get())
+    {
+        auto res = salticidae::trim_all(salticidae::split(s, ","));
+        if (res.size() < 1)
+            throw HotStuffError("format error");
+        raw_strong.push_back(res[0]);
+    }
 
+    for (const auto &p: raw_strong)
+    {
+        auto _p = split_ip_port_cport(p);
+        size_t _;
+        strong_replicas.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
+        printf("Pompe-unbias-client: strong bump %s\n", _p.first);
+    }
+
+    // Parse information for the weak client
+    Config config(argv[1]);
     std::string orderlogfile(argv[3]);
     std::string execlogfile(argv[4]);
     //Config config("hotstuff.conf");
