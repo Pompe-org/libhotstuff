@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
         auto _p = split_ip_port_cport(p);
         size_t _;
         strong_replicas.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
-        printf("Pompe-unbias-client: strong bump %s\n", _p.first.c_str());
+        //printf("Pompe-unbias-client: strong bump %s\n", _p.first.c_str());
     }
 
     // Parse speedbumps for the weak client and other configuration
