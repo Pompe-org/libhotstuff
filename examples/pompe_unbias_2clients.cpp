@@ -84,6 +84,7 @@ int count_sent, count_order, count_exec, count_backoff;
 using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> conns;
+std::unordered_map<ReplicaID, Net::conn_t> strong_conns;
 std::vector<Request> finished;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas, strong_replicas;
@@ -97,7 +98,7 @@ void connect_all() {
 
 void connect_all_strong() {
     for (size_t i = 0; i < strong_replicas.size(); i++)
-        conns.insert(std::make_pair(i, mn.connect_sync(strong_replicas[i])));
+        strong_conns.insert(std::make_pair(i, mn.connect_sync(strong_replicas[i])));
 }
 
 
