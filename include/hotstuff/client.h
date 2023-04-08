@@ -64,7 +64,7 @@ struct MsgEstConnRespCmd {
     uint256_t cmd_hash;
     uint64_t timestamp_us;
 
-    MsgEstConnRespCmd(const uint256_t &cmd_hash, const uint256_t &timestamp, const uint64_t timestamp_us, const SigSecp256k1 &sig) {
+    MsgEstConnRespCmd(const uint256_t &cmd_hash, const uint64_t timestamp_us) {
         serialized << cmd_hash << timestamp_us;
     }
     MsgEstConnRespCmd(DataStream &&s) {

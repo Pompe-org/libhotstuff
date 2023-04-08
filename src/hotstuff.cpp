@@ -742,7 +742,7 @@ void HotStuffBase::start(
              DataStream s;
              sig.serialize(s);
 
-             e.second(EstConnFinality(e.first, timestamp, timestamp_us, sig));
+             e.second(EstConnFinality(e.first, timestamp_us));
              return true;
          }
          return false;

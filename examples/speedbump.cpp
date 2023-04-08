@@ -39,9 +39,11 @@ using hotstuff::ReplicaID;
 using hotstuff::get_hash;
 using hotstuff::promise_t;
 
+using hotstuff::MsgEstConnReqCmd;
 using hotstuff::MsgOrdering1ReqCmd;
 using hotstuff::MsgOrdering2ReqCmd;
 using hotstuff::MsgRespCmd;
+using hotstuff::MsgEstConnRespCmd;
 using hotstuff::MsgOrdering1RespCmd;
 using hotstuff::MsgOrdering2RespCmd;
 using hotstuff::MsgConsensusRespClientCmd;
@@ -75,6 +77,32 @@ class Speedbump {
         return cmd;
     }
     
+    void client_estconn_req_handler(MsgEstConnReqCmd &&msg, const conn_t &conn) {
+        try {
+            const NetAddr addr = conn->get_addr();
+            auto cmd = parse_cmd(msg.serialized);
+            const auto &cmd_hash = cmd->get_hash();
+            pending_resp[cmd_hash] = addr;
+
+            MsgEstConnReqCmd msg_forward(*cmd);
+            mn.send_msg(msg_forward, node_conn);
+            num_order_forwarded++;
+        } catch(...) {
+            // Exceptions may happen during termination
+        }
+    }
+
+    void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
+        try {
+            const uint256_t &cmd_hash = msg.cmd_hash;
+            NetAddr addr = pending_resp[cmd_hash];
+            cn.send_msg(MsgEstConnRespCmd(cmd_hash, msg.timestamp_us), addr);
+            num_order_backwarded++;
+        } catch(...) {
+            // Exceptions may happen during termination
+        }
+    }
+
     void client_ordering1_req_handler(MsgOrdering1ReqCmd &&msg, const conn_t &conn) {
         try {
             const NetAddr addr = conn->get_addr();
@@ -163,6 +191,7 @@ public:
         cn(req_ec, clinet_config) {
 
         // Connect to node
+        mn.reg_handler(salticidae::generic_bind(&Speedbump::client_estconn_resp_cmd_handler, this, _1, _2));
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_resp_cmd_handler, this, _1, _2));
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering2_resp_cmd_handler, this, _1, _2));
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering_exec_resp_handler, this, _1, _2));
@@ -170,6 +199,7 @@ public:
         node_conn = mn.connect_sync(node_addr);
 
         // Connect to client
+        cn.reg_handler(salticidae::generic_bind(&Speedbump::client_estconn_req_handler, this, _1, _2));
         cn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering1_req_handler, this, _1, _2));
         cn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering2_req_handler, this, _1, _2));
 

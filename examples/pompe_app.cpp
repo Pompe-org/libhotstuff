@@ -439,7 +439,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
         while (q.try_dequeue(p))
         {
             try {
-                cn.send_msg(MsgEstConnRespCmd(p.first.cmd_hash, p.first.timestamp, p.first.timestamp_us, p.first.sig), p.second);
+                cn.send_msg(MsgEstConnRespCmd(p.first.cmd_hash, p.first.timestamp_us), p.second);
             } catch (std::exception &err) {
                 //HOTSTUFF_LOG_WARN("unable to send MsgEstConnRespCmd to the client: %s", err.what());
             }

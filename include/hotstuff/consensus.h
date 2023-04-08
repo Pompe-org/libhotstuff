@@ -313,31 +313,26 @@ struct Finality: public Serializable {
 
 struct EstConnFinality: public Serializable {
     uint256_t cmd_hash;
-    uint256_t timestamp;
     uint64_t timestamp_us;
-    SigSecp256k1 sig;
     
     public:
     EstConnFinality() = default;
     EstConnFinality(const uint256_t& _cmd_hash,
-                      const uint256_t& _timestamp,
-                      const uint64_t& _timestamp_us,
-                      const SigSecp256k1& _sig):
-    cmd_hash(_cmd_hash), timestamp(_timestamp), timestamp_us(_timestamp_us), sig(_sig) {}
+                      const uint64_t& _timestamp_us):
+    cmd_hash(_cmd_hash), timestamp_us(_timestamp_us) {}
 
     void serialize(DataStream &s) const override {
-        s << cmd_hash << timestamp << sig << timestamp_us;
+        s << cmd_hash << timestamp_us;
     }
 
     void unserialize(DataStream &s) override {
-        s >> cmd_hash >> timestamp >> sig >> timestamp_us;
+        s >> cmd_hash >> timestamp_us;
     }
 
     operator std::string () const {
         DataStream s;
         s << "<fin-estconn "
           << "cmd=" << get_hex10(cmd_hash) << " "
-          << "timestamp=" << get_hex10(timestamp) 
           << "timestamp_us=" << timestamp_us << ">";
         return s;
     }

@@ -68,8 +68,8 @@ struct Request {
     salticidae::ElapsedTime et_exec;
     //    std::vector<std::string> timestamps;
     uint64_t invocation_time_us;
-    std::vector<uint64_t> timestamps;
     std::vector<uint64_t> conn_timestamps;
+    std::vector<uint64_t> recv_timestamps;
     Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
         et.start();
@@ -172,12 +172,12 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     auto &et = it->second.et;    
 
     //std::string t = std::string(get_hex10(msg.timestamp));
-    it->second.timestamps.push_back(msg.timestamp_us);
+    it->second.recv_timestamps.push_back(msg.timestamp_us);
     if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // wait for 2f + 1 timestamps
 
     // pick the median timestamp, the f+1 th one
-    std::sort(it->second.timestamps.begin(), it->second.timestamps.end());
-    uint64_t median = it->second.timestamps[nfaulty + 1];
+    std::sort(it->second.recv_timestamps.begin(), it->second.recv_timestamps.end());
+    uint64_t median = it->second.recv_timestamps[nfaulty + 1];
     
     // send the second rtt message of ordering phase
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
@@ -351,20 +351,31 @@ int main(int argc, char **argv) {
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
     int finished_len = 100; // Get statistics of the first 100 invocations
-    std::vector<int64_t> results(4); // Assume 4 nodes
+    std::vector<int64_t> invoke_to_recv(4); // Assume 4 nodes
+    std::vector<int64_t> invoke_to_pref(4); // Assume 4 nodes
     for (int i = 0; i < finished_len; i++) {
         int64_t invocation = finished[i].invocation_time_us;
-        std::sort(finished[i].timestamps.begin(), finished[i].timestamps.end());
-        for (int j = 0; j < finished[i].timestamps.size(); j++)
-            results[j] += finished[i].timestamps[j] - invocation;
+        std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
+        std::sort(finished[i].recv_timestamps.begin(), finished[i].recv_timestamps.end());
+        for (int j = 0; j < finished[i].recv_timestamps.size(); j++) {
+            invoke_to_recv[j] += finished[i].recv_timestamps[j] - invocation;
+            int64_t unbiased = (finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2;
+            invoke_to_pref[j] += unbiased - invocation;
+        }
             //printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
     }
     printf("Pompe-unbias-2clients: Average preferences from the first %d invocations\n", finished_len);
-    for (auto it : results) {
+    for (auto it : invoke_to_pref) {
         int64_t delta = it / finished_len;
         printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
-    
+
+    printf("Pompe-unbias-2clients: single message delay from %d invocations\n", finished_len);
+    for (auto it : invoke_to_recv) {
+        int64_t delta = it / finished_len;
+        printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
+    }
+
     freopen(execlogfile.c_str(), "w", stdout);
 
     for (const auto &e: elapsed_exec)
@@ -378,10 +389,11 @@ int main(int argc, char **argv) {
     
     freopen(orderlogfile.c_str(), "w", stdout);
 
+    // invocation -> receive
     for (int i = 0; i < finished.size(); i++) {
         int64_t invocation = finished[i].invocation_time_us;
-        for (int j = 0; j < finished[i].timestamps.size(); j++)
-            printf("%ld    ", (int64_t)finished[i].timestamps[j] - invocation);
+        for (int j = 0; j < finished[i].recv_timestamps.size(); j++)
+            printf("%ld    ", (int64_t)finished[i].recv_timestamps[j] - invocation);
         printf("\n");
     }
     // for (const auto &e: elapsed)
