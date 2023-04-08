@@ -269,7 +269,7 @@ int main(int argc, char **argv) {
         printf("Pompe-unbias-client: strong bump %s\n", _p.first);
     }
 
-    // Parse information for the weak client
+    // Parse speedbumps for the weak client and other configuration
     Config config(argv[1]);
     std::string orderlogfile(argv[3]);
     std::string execlogfile(argv[4]);
