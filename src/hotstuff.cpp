@@ -721,6 +721,8 @@ void HotStuffBase::start(
     });
 
      estconn.reg_handler(ec, [this](estconn_queue_t &q) {
+         printf("[TMP] in estconn.reg_handler, hotstuff.cpp");
+
          std::pair<uint256_t, estconn_cb_t> e;
          
          while (q.try_dequeue(e))

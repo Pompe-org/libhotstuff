@@ -116,7 +116,6 @@ class Speedbump {
             // Forward client request to one node
             MsgOrdering1ReqCmd msg_forward(*cmd);
             mn.send_msg(msg_forward, node_conn);
-            num_order_forwarded++;
         } catch(...) {
             // Exceptions may happen during termination
         }
@@ -132,7 +131,6 @@ class Speedbump {
             // Return nodes response back to client
             NetAddr addr = pending_resp[cmd_hash];
             cn.send_msg(MsgOrdering1RespCmd(cmd_hash, msg.timestamp, msg.timestamp_us, msg.sig), addr);
-            num_order_backwarded++;
         } catch(...) {
             // Exceptions may happen during termination
         }
