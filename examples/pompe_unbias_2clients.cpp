@@ -261,6 +261,7 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 }
 
 int main(int argc, char **argv) {
+    printf("[TMP] client #1\n");
     // Parse speedbumps for the strong client
     Config config_strong(argv[2]);
     auto opt_strong_replicas = Config::OptValStrVec::create();
@@ -281,6 +282,7 @@ int main(int argc, char **argv) {
         strong_replicas.push_back(NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_))));
         //printf("Pompe-unbias-client: strong bump %s\n", _p.first.c_str());
     }
+    printf("[TMP] client #2\n");
 
     // Parse speedbumps for the weak client and other configuration
     Config config(argv[1]);
@@ -301,6 +303,7 @@ int main(int argc, char **argv) {
     salticidae::SigEvent ev_sigterm(ec, shutdown);
     ev_sigint.add(SIGINT);
     ev_sigterm.add(SIGTERM);
+    printf("[TMP] client #3\n");
 
     mn.reg_handler(client_estconn_resp_cmd_handler);
     mn.reg_handler(client_ordering1_resp_cmd_handler);
@@ -308,6 +311,7 @@ int main(int argc, char **argv) {
     mn.reg_handler(client_ordering_exec_resp_handler);
     mn.start();
 
+    printf("[TMP] client #4\n");
     config.add_opt("block-size", opt_blk_size, Config::SET_VAL);
     config.add_opt("stable-period", opt_stable_period, Config::SET_VAL);
     config.add_opt("idx", opt_idx, Config::SET_VAL);
@@ -331,6 +335,7 @@ int main(int argc, char **argv) {
         raw.push_back(res[0]);
     }
 
+    printf("[TMP] client #5\n");
     if (!(0 <= idx && (size_t)idx < raw.size() && raw.size() > 0))
         throw std::invalid_argument("out of range");
     cid = opt_cid->get() != -1 ? opt_cid->get() : idx;
@@ -346,6 +351,7 @@ int main(int argc, char **argv) {
     connect_all();
     //connect_all_strong();
 
+    printf("[TMP] client #6\n");
     while (try_send());
     ec.dispatch();
 
