@@ -93,13 +93,13 @@ using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> weak_conns;
 std::unordered_map<ReplicaID, Net::conn_t> strong_conns;
-std::vector<Request> weak_finished;
+std::vector<Request> weak_finished, strong_finished;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas, strong_replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
 
-void preferences_stats(std::vector<Request>&);
+void preferences_stats(const char*, std::vector<Request>&);
 void connect_all() {
     for (size_t i = 0; i < replicas.size(); i++)
         weak_conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
@@ -353,7 +353,7 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    preferences_stats(weak_finished);
+    preferences_stats("Poor", weak_finished);
 
     freopen(execlogfile.c_str(), "w", stdout);
 
@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void preferences_stats(std::vector<Request>& finished) {
+void preferences_stats(const char* type, std::vector<Request>& finished) {
     int finished_len = 100; // Get statistics of the first 100 invocations
     std::vector<int64_t> invoke_to_recv(replicas.size());
     std::vector<int64_t> invoke_to_pref(replicas.size());
@@ -405,13 +405,13 @@ void preferences_stats(std::vector<Request>& finished) {
         }
             //printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
     }
-    printf("Poor client: Average preferences from the first %d invocations\n", finished_len);
+    printf("%s client: Average preferences from the first %d invocations\n", type, finished_len);
     for (auto it : invoke_to_pref) {
         int64_t delta = it / finished_len;
         printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
 
-    printf("[DEBUG] Pompe-unbias-2clients: single message delay from %d invocations\n", finished_len);
+    printf("[DEBUG] %s client: single message delay from %d invocations\n", type, finished_len);
     for (auto it : invoke_to_recv) {
         int64_t delta = it / finished_len;
         printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
