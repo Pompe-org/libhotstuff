@@ -152,6 +152,7 @@ bool try_send(bool check = true) {
 
 void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
     printf("[TMP] client receives EstConnResp\n");
+    return;
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting.find(cmd_hash);
@@ -352,7 +353,6 @@ int main(int argc, char **argv) {
     //connect_all_strong();
 
     printf("[TMP] client #6\n");
-    return 0;
     while (try_send());
     ec.dispatch();
 
@@ -361,6 +361,7 @@ int main(int argc, char **argv) {
     printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
+    return 0;
 
     int finished_len = 100; // Get statistics of the first 100 invocations
     std::vector<int64_t> invoke_to_recv(4); // Assume 4 nodes
