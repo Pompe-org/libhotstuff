@@ -93,12 +93,13 @@ using Net = salticidae::MsgNetwork<opcode_t>;
 
 std::unordered_map<ReplicaID, Net::conn_t> weak_conns;
 std::unordered_map<ReplicaID, Net::conn_t> strong_conns;
-std::vector<Request> finished;
+std::vector<Request> weak_finished;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas, strong_replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
 Net mn(ec, Net::Config());
 
+void preferences_stats(std::vector<Request>&);
 void connect_all() {
     for (size_t i = 0; i < replicas.size(); i++)
         weak_conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
@@ -214,7 +215,7 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     // for debug
     //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), std::string(get_hex10(msg.timestamp)).c_str());
 #endif
-    finished.push_back(it->second);
+    weak_finished.push_back(it->second);
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
 
@@ -352,6 +353,44 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
+    preferences_stats(weak_finished);
+
+    freopen(execlogfile.c_str(), "w", stdout);
+
+    for (const auto &e: elapsed_exec)
+    {
+        char fmt[64];
+        struct tm *tmp = localtime(&e.first.tv_sec);
+        strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
+        fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    }
+
+    
+    // freopen(orderlogfile.c_str(), "w", stdout);
+
+    // invocation -> receive
+    // for (int i = 0; i < finished.size(); i++) {
+    //     int64_t invocation = finished[i].invocation_time_us;
+    //     for (int j = 0; j < finished[i].recv_timestamps.size(); j++)
+    //         printf("%ld    ", (int64_t)finished[i].recv_timestamps[j] - invocation);
+    //     printf("\n");
+    // }
+    // for (const auto &e: elapsed)
+    // {
+    //     char fmt[64];
+    //     struct tm *tmp = localtime(&e.first.tv_sec);
+    //     strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
+    //     fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    // }
+
+
+    fclose(stdout);
+
+#endif
+    return 0;
+}
+
+void preferences_stats(std::vector<Request>& finished) {
     int finished_len = 100; // Get statistics of the first 100 invocations
     std::vector<int64_t> invoke_to_recv(replicas.size());
     std::vector<int64_t> invoke_to_pref(replicas.size());
@@ -377,38 +416,4 @@ int main(int argc, char **argv) {
         int64_t delta = it / finished_len;
         printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
-
-    freopen(execlogfile.c_str(), "w", stdout);
-
-    for (const auto &e: elapsed_exec)
-    {
-        char fmt[64];
-        struct tm *tmp = localtime(&e.first.tv_sec);
-        strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
-        fprintf(stdout, fmt, e.first.tv_usec, e.second);
-    }
-
-    
-    freopen(orderlogfile.c_str(), "w", stdout);
-
-    // invocation -> receive
-    for (int i = 0; i < finished.size(); i++) {
-        int64_t invocation = finished[i].invocation_time_us;
-        for (int j = 0; j < finished[i].recv_timestamps.size(); j++)
-            printf("%ld    ", (int64_t)finished[i].recv_timestamps[j] - invocation);
-        printf("\n");
-    }
-    // for (const auto &e: elapsed)
-    // {
-    //     char fmt[64];
-    //     struct tm *tmp = localtime(&e.first.tv_sec);
-    //     strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
-    //     fprintf(stdout, fmt, e.first.tv_usec, e.second);
-    // }
-
-
-    fclose(stdout);
-
-#endif
-    return 0;
 }
