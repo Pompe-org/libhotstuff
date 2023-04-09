@@ -115,7 +115,6 @@ bool try_send(bool check = true) {
     //if (debug_limit++ > 10) return false;
 
     printf("[TMP] client  in try_send\n");
-    return false;
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
@@ -152,7 +151,7 @@ bool try_send(bool check = true) {
 }
 
 void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
-    printf("[TMP] client receives EstConnResp for %s\n", std::string(get_hex10(msg.cmd_hash)).c_str());
+    printf("[TMP] client receives EstConnResp\n");
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting.find(cmd_hash);
@@ -345,7 +344,7 @@ int main(int argc, char **argv) {
     nfaulty = (replicas.size() - 1) / 3;
     HOTSTUFF_LOG_INFO("nfaulty = %zu", nfaulty);
     connect_all();
-    connect_all_strong();
+    //connect_all_strong();
 
     while (try_send());
     ec.dispatch();
