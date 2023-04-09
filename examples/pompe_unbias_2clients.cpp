@@ -115,6 +115,7 @@ bool try_send(bool check = true) {
     //if (debug_limit++ > 10) return false;
 
     printf("[TMP] client  in try_send\n");
+    return false;
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         // client backoff
