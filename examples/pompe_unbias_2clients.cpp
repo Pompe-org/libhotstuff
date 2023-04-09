@@ -423,14 +423,18 @@ int main(int argc, char **argv) {
 
 void preferences_stats(const char* type, std::vector<Request>& finished) {
     int finished_len = 100; // Get statistics of the first 100 invocations
-    std::vector<int64_t> invoke_to_recv(replicas.size());
+    std::vector<int64_t> msg_delay(replicas.size());
     std::vector<int64_t> invoke_to_pref(replicas.size());
     for (int i = 0; i < finished_len; i++) {
         int64_t invocation = finished[i].invocation_time_us;
         std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
         std::sort(finished[i].recv_timestamps.begin(), finished[i].recv_timestamps.end());
         for (int j = 0; j < finished[i].recv_timestamps.size(); j++) {
-            invoke_to_recv[j] += finished[i].recv_timestamps[j] - invocation;
+            if (finished[i].attacker)
+                msg_delay[j] += finished[i].conn_timestamps[j] - invocation;
+            else
+                msg_delay[j] += finished[i].recv_timestamps[j] - invocation;
+
             int64_t unbiased = (finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2;
             invoke_to_pref[j] += unbiased - invocation;
         }
@@ -443,7 +447,7 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
     }
 
     printf("[DEBUG] %s client: single message delay from %d invocations\n", type, finished_len);
-    for (auto it : invoke_to_recv) {
+    for (auto it : msg_delay) {
         int64_t delta = it / finished_len;
         printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
