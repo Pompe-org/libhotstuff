@@ -349,7 +349,6 @@ int main(int argc, char **argv) {
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
     printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
-    return 0;
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
