@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
     printf("[DEBUG] Pompe-unbias-2clients: single message delay from %d invocations\n", finished_len);
     for (auto it : invoke_to_recv) {
         int64_t delta = it / finished_len;
-        printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
+        printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
     }
 
     freopen(execlogfile.c_str(), "w", stdout);
