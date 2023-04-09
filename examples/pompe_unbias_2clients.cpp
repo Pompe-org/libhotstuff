@@ -149,7 +149,7 @@ bool try_send(bool check = true) {
     return false;
 }
 
-void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &) {
+void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &conn) {
     //printf("[TMP] client receives EstConnResp\n");
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
@@ -157,15 +157,11 @@ void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t 
     if (it == waiting.end()) return;
 
     if (it->second.attacker) {
-        // Rich client
+        // Rich client, without barrier
         it->second.conn_timestamps.push_back(msg.timestamp_us);
-        if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
-    
-        // send the first rtt message of ordering phase
+        // directly send the first rtt message of ordering phase
         MsgOrdering1ReqCmd next_msg(*it->second.cmd);
-        for (auto &p: strong_conns) {
-            mn.send_msg(next_msg, p.second);
-        }
+        mn.send_msg(next_msg, conn);
     } else {
         // Poor client
         it->second.conn_timestamps.push_back(msg.timestamp_us);
