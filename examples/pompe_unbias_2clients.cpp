@@ -352,6 +352,7 @@ int main(int argc, char **argv) {
     //connect_all_strong();
 
     printf("[TMP] client #6\n");
+    return 0;
     while (try_send());
     ec.dispatch();
 
