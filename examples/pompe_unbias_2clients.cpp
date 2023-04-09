@@ -59,6 +59,8 @@ uint32_t cnt = 0;
 uint32_t nfaulty;
 
 struct Request {
+    bool attacker;
+
     command_t cmd;
     size_t confirmed;
     size_t estconn_rtt;
@@ -71,10 +73,11 @@ struct Request {
     uint64_t invocation_time_us;
     std::vector<uint64_t> conn_timestamps;
     std::vector<uint64_t> recv_timestamps;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
+    Request(const command_t &cmd, bool attacker): cmd(cmd), attacker(attacker), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
         et.start();
         et_exec.start();
+        if (attacker) invoke();
     }
 
     void invoke() {
@@ -125,22 +128,20 @@ bool try_send(bool check = true) {
         //     for (cnt = 0; cnt < 1000000LL; cnt++);
         // }
         // count_sent++;
-
-        auto cmd = new CommandDummy(cid, cnt++);
         //MsgOrdering1ReqCmd msg(*cmd);
+
+        // Poor client establish connection
+        auto cmd = new CommandDummy(cid, cnt++);
         MsgEstConnReqCmd msg(*cmd);
-        //for (auto &p: conns) mn.send_msg(msg, p.second);
-        
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg, p.second);
         }
+        waiting.insert(std::make_pair(cmd->get_hash(), Request(cmd, false)));
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
                             get_hex(cmd->get_hash()).c_str());
 #endif
-        waiting.insert(std::make_pair(
-            cmd->get_hash(), Request(cmd)));
         if (max_iter_num > 0)
             max_iter_num--;
         return true;
@@ -155,15 +156,35 @@ void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t 
     auto it = waiting.find(cmd_hash);
     if (it == waiting.end()) return;
 
-    //std::string t = std::string(get_hex10(msg.timestamp));
-    it->second.conn_timestamps.push_back(msg.timestamp_us);
-    if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
+    if (it->second.attacker) {
+        // Rich client
+        it->second.conn_timestamps.push_back(msg.timestamp_us);
+        if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
     
-    // send the first rtt message of ordering phase
-    it->second.invoke(); // get invocation time
-    MsgOrdering1ReqCmd next_msg(*it->second.cmd);
-    for (auto &p: weak_conns) {
-        mn.send_msg(next_msg, p.second);
+        // send the first rtt message of ordering phase
+        MsgOrdering1ReqCmd next_msg(*it->second.cmd);
+        for (auto &p: strong_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
+    } else {
+        // Poor client
+        it->second.conn_timestamps.push_back(msg.timestamp_us);
+        if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
+    
+        // send the first rtt message of ordering phase
+        it->second.invoke(); // get invocation time
+        MsgOrdering1ReqCmd next_msg(*it->second.cmd);
+        for (auto &p: weak_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
+
+        // rich client starts to front-run
+        auto cmd = new CommandDummy(cid, cnt++);
+        MsgEstConnReqCmd msg(*cmd);
+        for (int i = 0; i < BATCH_SIZE; i++) {
+            for (auto &p: strong_conns) mn.send_msg(msg, p.second);
+        }
+        waiting.insert(std::make_pair(cmd->get_hash(), Request(cmd, true)));
     }
 }
 
@@ -184,8 +205,17 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     
     // send the second rtt message of ordering phase
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
-    for (auto &p: weak_conns) {
-        mn.send_msg(next_msg, p.second);
+
+    if (it->second.attacker) {
+        // Rich client
+        for (auto &p: strong_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
+    } else {
+        // Poor client
+        for (auto &p: weak_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
     }
 }
 
@@ -215,7 +245,13 @@ void client_ordering2_resp_cmd_handler(MsgOrdering2RespCmd &&msg, const Net::con
     // for debug
     //fprintf(stdout, "got %s, timestamps: %s\n", std::string(get_hex10(cmd_hash)).c_str(), std::string(get_hex10(msg.timestamp)).c_str());
 #endif
-    weak_finished.push_back(it->second);
+    if (it->second.attacker) {
+        // Rich client
+        strong_finished.push_back(it->second);
+    } else {
+        // Poor client
+        weak_finished.push_back(it->second);
+    }
     waiting_exec.insert(std::make_pair(it->first, it->second));
     waiting.erase(it);
 
@@ -250,8 +286,6 @@ void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Ne
     waiting_exec.erase(it);
 
 }
-
-
 
 std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
     auto ret = salticidae::trim_all(salticidae::split(s, ";"));
@@ -342,7 +376,7 @@ int main(int argc, char **argv) {
     nfaulty = (replicas.size() - 1) / 3;
     HOTSTUFF_LOG_INFO("nfaulty = %zu", nfaulty);
     connect_all();
-    //connect_all_strong();
+    connect_all_strong();
 
     while (try_send());
     ec.dispatch();
@@ -354,6 +388,7 @@ int main(int argc, char **argv) {
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
     preferences_stats("Poor", weak_finished);
+    preferences_stats("Rich", strong_finished);
 
     freopen(execlogfile.c_str(), "w", stdout);
 
