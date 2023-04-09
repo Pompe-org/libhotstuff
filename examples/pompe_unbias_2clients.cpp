@@ -135,7 +135,7 @@ bool try_send(bool check = true) {
             for (auto &p: weak_conns) mn.send_msg(msg, p.second);
         }
 
-        printf("[TMP] client sends EstConnReq for %.10s\n", get_hex(cmd->get_hash()).c_str());
+        printf("[TMP] client sends MsgEstConnReqCmd\n");
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
