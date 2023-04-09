@@ -353,8 +353,8 @@ int main(int argc, char **argv) {
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
     int finished_len = 100; // Get statistics of the first 100 invocations
-    std::vector<int64_t> invoke_to_recv(4); // Assume 4 nodes
-    std::vector<int64_t> invoke_to_pref(4); // Assume 4 nodes
+    std::vector<int64_t> invoke_to_recv(replicas.size());
+    std::vector<int64_t> invoke_to_pref(replicas.size());
     for (int i = 0; i < finished_len; i++) {
         int64_t invocation = finished[i].invocation_time_us;
         std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
