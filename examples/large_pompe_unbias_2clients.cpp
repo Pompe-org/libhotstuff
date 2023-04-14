@@ -417,7 +417,9 @@ int main(int argc, char **argv) {
 
 
 void preferences_stats(const char* type, std::vector<Request>& finished) {
-    int finished_len = 100; // Get statistics of the first 100 invocations
+    int finished_len = 1000; // Get statistics of the first 100 invocations
+    assert(finished_len > finished.size());
+
     int avg_est = 0;
     // std::vector<int64_t> msg_delay(replicas.size());
     for (int i = 0; i < finished_len; i++) {
@@ -436,8 +438,8 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
 
         std::sort(unbiased.begin(), unbiased.end());
         int64_t invocation = finished[i].invoc_time_us;
-        avg_est += (invocation - unbiased[nfaulty + 1]);
-        printf("[DEBUG] invocation %ld, unbiased %ld\n", invocation, unbiased[nfaulty + 1]);
+        avg_est += (unbiased[nfaulty + 1] - invocation);
+        //printf("[DEBUG] invocation %ld, unbiased %ld\n", invocation, unbiased[nfaulty + 1]);
     }
     avg_est /= finished_len;
 
