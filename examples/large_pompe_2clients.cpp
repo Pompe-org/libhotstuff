@@ -60,7 +60,6 @@ uint32_t nfaulty;
 
 struct Request {
     bool strong;
-    uint64_t median;
 
     command_t cmd;
     size_t confirmed;
@@ -71,14 +70,14 @@ struct Request {
     salticidae::ElapsedTime et;
     salticidae::ElapsedTime et_exec;
     //    std::vector<std::string> timestamps;
-    uint64_t invocation_time_us;
+    uint64_t invocation_time_us, median_delta;
     std::vector<uint64_t> conn_timestamps;
     std::vector<uint64_t> recv_timestamps;
     Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
         et.start();
         et_exec.start();
-        if (strong) invoke();
+        invoke();
     }
 
     void invoke() {
@@ -162,7 +161,7 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     // pick the median timestamp, the f+1 th one
     std::sort(it->second.recv_timestamps.begin(), it->second.recv_timestamps.end());
     uint64_t median = it->second.recv_timestamps[nfaulty + 1];
-    it->second.median = median;
+    it->second.median_delta = median - it->second.invocation_time_us;
     
     // send the second rtt message of ordering phase
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
@@ -349,11 +348,13 @@ int main(int argc, char **argv) {
 
     uint64_t avg_weak, avg_strong = 0;
     for (int i = 0; i < 100; i++) {
-        avg_weak += weak_finished[i].median;
-        avg_strong += strong_finished[i].median;
+        avg_weak += weak_finished[i].median_delta;
+        avg_strong += strong_finished[i].median_delta;
     }
-    printf("    Weak client average: t + %lu\n", avg_weak / 100);
-    printf("    Strong client average: t + %lu\n", avg_strong / 100);
+    avg_weak /= 100;
+    avg_strong /= 100;
+    printf("    Weak client average: t + %lu ms, %lu us\n", avg_weak / 1000, avg_weak % 1000);
+    printf("    Strong client average: t + %u ms, %lu us\n", avg_strong / 1000, avg_strong % 1000);
     
     //preferences_stats("Poor", weak_finished);
     //preferences_stats("Rich", strong_finished);
