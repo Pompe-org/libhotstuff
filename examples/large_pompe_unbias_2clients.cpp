@@ -81,13 +81,6 @@ struct Request {
         invoke();
     }
 
-    Request(const command_t &cmd, const command_t &match, bool strong): cmd(cmd), match_cmd(match), strong(strong), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
-    {
-        et.start();
-        et_exec.start();
-        conn_time_us = now();
-    }
-
     void invoke() { invoc_time_us = now(); }
 
     uint64_t now() {
@@ -146,7 +139,7 @@ bool try_send(bool check = true) {
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
         }
-        waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, cmd0, true)));
+        waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, true)));
         printf("[TMP] client finishes sending EstConnReq\n");
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
@@ -333,6 +326,7 @@ int main(int argc, char **argv) {
     ev_sigint.add(SIGINT);
     ev_sigterm.add(SIGTERM);
 
+    mn.reg_handler(client_estconn_resp_cmd_handler);
     mn.reg_handler(client_ordering1_resp_cmd_handler);
     mn.reg_handler(client_ordering2_resp_cmd_handler);
     mn.reg_handler(client_ordering_exec_resp_handler);
