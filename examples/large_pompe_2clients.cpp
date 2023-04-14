@@ -73,7 +73,7 @@ struct Request {
     uint64_t invocation_time_us, median_delta;
     std::vector<uint64_t> conn_timestamps;
     std::vector<uint64_t> recv_timestamps;
-    Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
+    Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), median_delta(0), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
         et.start();
         et_exec.start();
@@ -161,7 +161,8 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     // pick the median timestamp, the f+1 th one
     std::sort(it->second.recv_timestamps.begin(), it->second.recv_timestamps.end());
     uint64_t median = it->second.recv_timestamps[nfaulty + 1];
-    it->second.median_delta = median - it->second.invocation_time_us;
+    if (median > it->second.invocation_time_us)
+        it->second.median_delta = median - it->second.invocation_time_us;
     
     // send the second rtt message of ordering phase
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
