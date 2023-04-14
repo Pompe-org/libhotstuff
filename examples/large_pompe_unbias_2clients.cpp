@@ -429,12 +429,16 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
             unbiased.push_back((finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2);
             // DEBUG
             // msg_delay[j] += finished[i].recv_timestamps[j] - invocation;
+            if (i == 0) {
+                printf("[DEBUG] replica%d, recv %ld, conn %ld\n", j, finished[i].recv_timestamps[j], finished[i].conn_timestamps[j]);
+            }
         }
+
 
         std::sort(unbiased.begin(), unbiased.end());
         int64_t invocation = finished[i].invoc_time_us;
         avg_est += (invocation - unbiased[nfaulty + 1]);
-        printf("[DEBUG] invocation %ld, unbiased %ld\n", invocation, unbiased[nfaulty + 1]);
+        //printf("[DEBUG] invocation %ld, unbiased %ld\n", invocation, unbiased[nfaulty + 1]);
     }
     avg_est /= finished_len;
 
