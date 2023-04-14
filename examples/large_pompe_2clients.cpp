@@ -353,8 +353,10 @@ int main(int argc, char **argv) {
     }
     avg_weak /= 100;
     avg_strong /= 100;
-    printf("    Weak client average: t + %lu ms, %lu us\n", avg_weak / 1000, avg_weak % 1000);
-    printf("    Strong client average: t + %u ms, %lu us\n", avg_strong / 1000, avg_strong % 1000);
+    printf("    Weak client total: %d\n", weak_finished.size());
+    printf("    Strong client total: %d\n", strong_finished.size());
+    printf("    Weak client average100: t + %lu ms, %lu us\n", avg_weak / 1000, avg_weak % 1000);
+    printf("    Strong client average100: t + %u ms, %lu us\n", avg_strong / 1000, avg_strong % 1000);
     
     //preferences_stats("Poor", weak_finished);
     //preferences_stats("Rich", strong_finished);
