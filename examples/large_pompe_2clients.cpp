@@ -358,6 +358,13 @@ int main(int argc, char **argv) {
     printf("    Strong client total: %d\n", strong_finished.size());
     printf("    Weak client average100: t + %lu ms, %lu us\n", avg_weak / 1000, avg_weak % 1000);
     printf("    Strong client average100: t + %u ms, %lu us\n", avg_strong / 1000, avg_strong % 1000);
+
+    for (int i = 0; i < 5; i++) {
+        printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
+        for (int j = 0; j < nfaulty*2+1; j++)
+            printf("  %lu", weak_finished[i].median_delta);
+        printf("\n");
+    }
     
     //preferences_stats("Poor", weak_finished);
     //preferences_stats("Rich", strong_finished);
