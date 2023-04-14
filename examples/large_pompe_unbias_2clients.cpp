@@ -152,7 +152,7 @@ bool try_send(bool check = true) {
 }
 
 void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &conn) {
-    printf("[TMP] client receives EstConnResp\n");
+    //printf("[TMP] client receives EstConnResp\n");
 
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting.find(cmd_hash);
