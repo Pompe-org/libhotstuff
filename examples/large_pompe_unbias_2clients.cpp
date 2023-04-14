@@ -62,6 +62,7 @@ struct Request {
     bool strong;
 
     command_t cmd;
+    command_t match_cmd;
     size_t confirmed;
     size_t estconn_rtt;
     size_t ordering_rtt1;
@@ -70,22 +71,30 @@ struct Request {
     salticidae::ElapsedTime et;
     salticidae::ElapsedTime et_exec;
     //    std::vector<std::string> timestamps;
-    uint64_t invocation_time_us, median_delta;
+    uint64_t conn_time_us, invoc_time_us;
     std::vector<uint64_t> conn_timestamps;
     std::vector<uint64_t> recv_timestamps;
-    Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), median_delta(0), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
+    Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
     {
         et.start();
         et_exec.start();
         invoke();
     }
 
-    void invoke() {
+    Request(const command_t &cmd, const command_t &match, bool strong): cmd(cmd), match_cmd(match), strong(strong), confirmed(0), estconn_rtt(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0)
+    {
+        et.start();
+        et_exec.start();
+        conn_time_us = now();
+    }
+
+    void invoke() { invoc_time_us = now(); }
+
+    uint64_t now() {
         struct timeval tv;
         gettimeofday(&tv, nullptr);
-        invocation_time_us = tv.tv_sec;
-        invocation_time_us *= 1000 * 1000;
-        invocation_time_us += tv.tv_usec;
+        uint64_t ret = tv.tv_sec * 1000 * 1000;
+        return ret + tv.tv_usec;
     }
 };
 
@@ -122,7 +131,8 @@ bool try_send(bool check = true) {
     {
         // Weak client's command
         auto cmd0 = new CommandDummy(cid, cnt++);
-        MsgOrdering1ReqCmd msg0(*cmd0);
+        //MsgOrdering1ReqCmd msg0(*cmd0);
+        MsgEstConnReqCmd msg0(*cmd0);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
         }
@@ -130,11 +140,12 @@ bool try_send(bool check = true) {
 
         // Strong client's command
         auto cmd1 = new CommandDummy(cid, cnt++);
-        MsgOrdering1ReqCmd msg1(*cmd1);
+        //MsgOrdering1ReqCmd msg1(*cmd1);
+        MsgEstConnReqCmd msg1(*cmd1);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
         }
-        waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, true)));
+        waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, cmd0, true)));
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
@@ -145,6 +156,31 @@ bool try_send(bool check = true) {
         return true;
     }
     return false;
+}
+
+void client_estconn_resp_cmd_handler(MsgEstConnRespCmd &&msg, const Net::conn_t &conn) {
+    const uint256_t &cmd_hash = msg.cmd_hash;
+    auto it = waiting.find(cmd_hash);
+    if (it == waiting.end()) return;
+
+    it->second.conn_timestamps.push_back(msg.timestamp_us);
+    if (++it->second.estconn_rtt != nfaulty*2+1) return; // barrier for connection establishment
+    
+    // send the first rtt message of ordering phase
+    it->second.invoke(); // get invocation time
+    MsgOrdering1ReqCmd next_msg(*it->second.cmd);
+
+    if (it->second.strong) {
+        // Strong client
+        for (auto &p: strong_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
+    } else {
+        // Weak client
+        for (auto &p: weak_conns) {
+            mn.send_msg(next_msg, p.second);
+        }
+    }
 }
 
 void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
@@ -161,8 +197,6 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     // pick the median timestamp, the f+1 th one
     std::sort(it->second.recv_timestamps.begin(), it->second.recv_timestamps.end());
     uint64_t median = it->second.recv_timestamps[nfaulty + 1];
-    if (median > it->second.invocation_time_us)
-        it->second.median_delta = median - it->second.invocation_time_us;
     
     // send the second rtt message of ordering phase
     MsgOrdering2ReqCmd next_msg(cmd_hash, median);
@@ -347,27 +381,8 @@ int main(int argc, char **argv) {
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
 
-    uint64_t avg_weak(0), avg_strong(0);
-    for (int i = 0; i < 100; i++) {
-        avg_weak += weak_finished[i].median_delta;
-        avg_strong += strong_finished[i].median_delta;
-    }
-    avg_weak /= 100;
-    avg_strong /= 100;
-    printf("    Weak client total: %d\n", weak_finished.size());
-    printf("    Strong client total: %d\n", strong_finished.size());
-    printf("    Weak client average100: t + %lu ms, %lu us\n", avg_weak / 1000, avg_weak % 1000);
-    printf("    Strong client average100: t + %u ms, %lu us\n", avg_strong / 1000, avg_strong % 1000);
-
-    // for (int i = 0; i < 5; i++) {
-    //     printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
-    //     for (int j = 0; j < nfaulty*2+1; j++)
-    //         printf("  %lu", weak_finished[j].median_delta);
-    //     printf("\n");
-    // }
-    
-    //preferences_stats("Poor", weak_finished);
-    //preferences_stats("Rich", strong_finished);
+    preferences_stats("Weak", weak_finished);
+    preferences_stats("Strong", strong_finished);
 
     freopen(execlogfile.c_str(), "w", stdout);
 
@@ -404,18 +419,16 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+
 void preferences_stats(const char* type, std::vector<Request>& finished) {
     int finished_len = 100; // Get statistics of the first 100 invocations
     std::vector<int64_t> msg_delay(replicas.size());
     std::vector<int64_t> invoke_to_pref(replicas.size());
     for (int i = 0; i < finished_len; i++) {
-        int64_t invocation = finished[i].invocation_time_us;
+        int64_t invocation = finished[i].invoc_time_us;
         std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
         std::sort(finished[i].recv_timestamps.begin(), finished[i].recv_timestamps.end());
         for (int j = 0; j < finished[i].recv_timestamps.size(); j++) {
-            if (finished[i].strong)
-                msg_delay[j] += finished[i].conn_timestamps[j] - invocation;
-            else
                 msg_delay[j] += finished[i].recv_timestamps[j] - invocation;
 
             int64_t unbiased = (finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2;
