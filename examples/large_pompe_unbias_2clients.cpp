@@ -422,29 +422,34 @@ int main(int argc, char **argv) {
 
 void preferences_stats(const char* type, std::vector<Request>& finished) {
     int finished_len = 100; // Get statistics of the first 100 invocations
-    std::vector<int64_t> msg_delay(replicas.size());
-    std::vector<int64_t> invoke_to_pref(replicas.size());
+    int avg_est = 0;
+    // std::vector<int64_t> msg_delay(replicas.size());
     for (int i = 0; i < finished_len; i++) {
-        int64_t invocation = finished[i].invoc_time_us;
         std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
         std::sort(finished[i].recv_timestamps.begin(), finished[i].recv_timestamps.end());
+
+        std::vector<int64_t> unbiased(replicas.size());
         for (int j = 0; j < finished[i].recv_timestamps.size(); j++) {
-                msg_delay[j] += finished[i].recv_timestamps[j] - invocation;
-
-            int64_t unbiased = (finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2;
-            invoke_to_pref[j] += unbiased - invocation;
+            unbiased.push_back((finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2);
+            // DEBUG
+            // msg_delay[j] += finished[i].recv_timestamps[j] - invocation;
         }
-            //printf("    %ld (%ld:%ld - %ld:%ld)\n", (int64_t)t - invocation, t / 1000000, t % 1000000, invocation / 1000000, invocation % 1000000);
-    }
-    printf("%s client: Average preferences from the first %d invocations\n", type, finished_len);
-    for (auto it : invoke_to_pref) {
-        int64_t delta = it / finished_len;
-        printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
+
+        std::sort(unbiased.begin(), unbiased.end());
+        int64_t invocation = finished[i].invoc_time_us;
+        avg_est += (invocation - unbiased[nfaulty + 1]);
     }
 
-    printf("[DEBUG] %s client: single message delay from %d invocations\n", type, finished_len);
-    for (auto it : msg_delay) {
-        int64_t delta = it / finished_len;
-        printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
-    }
+    printf("    %s client: Average aggregate-to-invoke is t %d ms %d us\n", type, avg_est / 1000, avg_est % 1000);
+    // printf("%s client: Average preferences from the first %d invocations\n", type, finished_len);
+    // for (auto it : invoke_to_pref) {
+    //     int64_t delta = it / finished_len;
+    //     printf("    %ldms : %ldus\n", delta / 1000, delta % 1000);
+    // }
+
+    // printf("[DEBUG] %s client: single message delay from %d invocations\n", type, finished_len);
+    // for (auto it : msg_delay) {
+    //     int64_t delta = it / finished_len;
+    //     printf("    [DEBUG] %ldms : %ldus\n", delta / 1000, delta % 1000);
+    // }
 }
