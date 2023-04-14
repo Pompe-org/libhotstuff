@@ -424,7 +424,7 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
         std::sort(finished[i].conn_timestamps.begin(), finished[i].conn_timestamps.end());
         std::sort(finished[i].recv_timestamps.begin(), finished[i].recv_timestamps.end());
 
-        std::vector<int64_t> unbiased(replicas.size());
+        std::vector<int64_t> unbiased;
         for (int j = 0; j < finished[i].recv_timestamps.size(); j++) {
             unbiased.push_back((finished[i].recv_timestamps[j] + finished[i].conn_timestamps[j]) / 2);
             // DEBUG
@@ -433,7 +433,6 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
                 printf("[DEBUG] replica%d, recv %ld, conn %ld\n", j, finished[i].recv_timestamps[j], finished[i].conn_timestamps[j]);
             }
         }
-
 
         std::sort(unbiased.begin(), unbiased.end());
         int64_t invocation = finished[i].invoc_time_us;
