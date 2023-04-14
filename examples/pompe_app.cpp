@@ -378,7 +378,10 @@ int main(int argc, char **argv) {
     papp->start(reps);
     elapsed.stop(true);
 
-    printf("[DEBUG] server%d write to log file %s\n", idx, logfile.c_str());
+    // Don't print this if there are too many replicas
+    if (replicas.size() < 10)
+        printf("[DEBUG] server%d write to log file %s\n", idx, logfile.c_str());
+
     if (debug_timer_trigger > 0)
         printf("[DEBUG] server%d finished %d ordering phases; timer triggered %d times; send %d exec responses to clients with %d callbacks\n", idx, debug_finish_ordering_phase, debug_timer_trigger, debug_server_exec_resp, debug_timer_callback_trigger);
     freopen(logfile.c_str(), "w", stdout);

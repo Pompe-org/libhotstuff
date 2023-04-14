@@ -51,7 +51,7 @@ using hotstuff::MsgConsensusRespClientCmd;
 using HotStuff = hotstuff::HotStuffSecp256k1;
 
 class Speedbump {
-    int idx, cnt;
+    int idx, total;
     EventContext ec;
     EventContext req_ec;
     EventContext resp_ec;
@@ -179,12 +179,14 @@ class Speedbump {
 
 public:
     Speedbump(int idx,
+              int total,
               const EventContext &ec,
               NetAddr clisten_addr,
               NetAddr node_addr,
               const ClientNetwork<opcode_t>::Config &clinet_config):
         ec(ec),
         idx(idx),
+        total(total),
         mn(resp_ec, Net::Config()),
         cn(req_ec, clinet_config),
         num_exec_backwarded(0), num_order_forwarded(0), num_order_backwarded(0) {
@@ -211,7 +213,9 @@ public:
     }
 
     void stop() {
-        printf("[DEBUG] Bump #%d order(forward=%d, backward=%d) exec(backward=%d)\n", idx, num_order_forwarded, num_order_backwarded, num_exec_backwarded);
+        // Don't print this if there are too many bumps
+        if (total < 10)
+            printf("[DEBUG] Bump #%d order(forward=%d, backward=%d) exec(backward=%d)\n", idx, num_order_forwarded, num_order_backwarded, num_exec_backwarded);
         try {
             req_ec.stop();
             resp_ec.stop();
@@ -301,7 +305,7 @@ int main(int argc, char **argv) {
         .nworker(opt_clinworker->get());
 
     EventContext ec;
-    auto cs = new Speedbump(idx, ec, NetAddr("0.0.0.0", client_port), node, clinet_config);
+    auto cs = new Speedbump(idx, raw.size(), ec, NetAddr("0.0.0.0", client_port), node, clinet_config);
     auto shutdown = [&](int) { cs->stop(); };
     salticidae::SigEvent ev_sigint(ec, shutdown);
     salticidae::SigEvent ev_sigterm(ec, shutdown);
