@@ -443,7 +443,7 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
     }
     avg_est /= finished_len;
 
-    printf("    %s client: Average aggregate-to-invoke is t %ld ms %ld us\n", type, avg_est / 1000, avg_est % 1000);
+    printf("    %s client: Average aggregate-to-invoke is t %.3fms\n", type, (double)(avg_est) / 1000);
     // printf("%s client: Average preferences from the first %d invocations\n", type, finished_len);
     // for (auto it : invoke_to_pref) {
     //     int64_t delta = it / finished_len;
