@@ -186,7 +186,8 @@ public:
         ec(ec),
         idx(idx),
         mn(resp_ec, Net::Config()),
-        cn(req_ec, clinet_config) {
+        cn(req_ec, clinet_config),
+        num_exec_backwarded(0), num_order_forwarded(0), num_order_backwarded(0) {
 
         // Connect to node
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_estconn_resp_cmd_handler, this, _1, _2));
