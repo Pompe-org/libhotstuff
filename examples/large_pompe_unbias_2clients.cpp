@@ -125,7 +125,6 @@ bool try_send(bool check = true) {
         // Weak client's command
         auto cmd0 = new CommandDummy(cid, cnt++);
         //MsgOrdering1ReqCmd msg0(*cmd0);
-        printf("[TMP] client sends EstConnReq\n");
         MsgEstConnReqCmd msg0(*cmd0);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
@@ -140,7 +139,6 @@ bool try_send(bool check = true) {
             for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
         }
         waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, true)));
-        printf("[TMP] client finishes sending EstConnReq\n");
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
