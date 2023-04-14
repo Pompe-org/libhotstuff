@@ -40,5 +40,8 @@ target_link_libraries(pompe-unbias-2clients hotstuff_static)
 add_executable(large-pompe-2clients large_pompe_2clients.cpp)
 target_link_libraries(large-pompe-2clients hotstuff_static)
 
+add_executable(large-pompe-unbias-2clients large_pompe_unbias_2clients.cpp)
+target_link_libraries(large-pompe-unbias-2clients hotstuff_static)
+
 add_executable(speedbump speedbump.cpp)
 target_link_libraries(speedbump hotstuff_static)
