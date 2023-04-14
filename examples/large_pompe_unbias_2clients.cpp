@@ -434,7 +434,9 @@ void preferences_stats(const char* type, std::vector<Request>& finished) {
         std::sort(unbiased.begin(), unbiased.end());
         int64_t invocation = finished[i].invoc_time_us;
         avg_est += (invocation - unbiased[nfaulty + 1]);
+        printf("[DEBUG] invocation %ld, unbiased %ld\n", invocation, unbiased[nfaulty + 1]);
     }
+    avg_est /= finished_len;
 
     printf("    %s client: Average aggregate-to-invoke is t %d ms %d us\n", type, avg_est / 1000, avg_est % 1000);
     // printf("%s client: Average preferences from the first %d invocations\n", type, finished_len);
