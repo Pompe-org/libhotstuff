@@ -417,7 +417,7 @@ int main(int argc, char **argv) {
 
 
 void preferences_stats(const char* type, std::vector<Request>& finished) {
-    int finished_len = 1000; // Get statistics of the first 100 invocations
+    int finished_len = 200; // Get statistics of the first 100 invocations
     assert(finished_len > finished.size());
 
     int avg_est = 0;
