@@ -35,15 +35,15 @@ if __name__ == "__main__":
     nodes = open('./conf-gen/'+args.nodes, 'w')
 
     # Speedbumps for large experiment
-    # ips = ["strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0",
-    #        "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1",
-    #        "strong_8", "strong_9", "strong_10", "strong_11_0", "strong_11_1"]
-    ips = ["weak_0", "weak_1", "weak_2", "weak_3", "weak_4_0",
-           "weak_4_1", "weak_5", "weak_6", "weak_7_0", "weak_7_1",
-           "weak_8", "weak_9", "weak_10", "weak_11_0", "weak_11_1"]
+    ips = ["strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0",
+           "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1",
+           "strong_8", "strong_9", "strong_10", "strong_11_0", "strong_11_1"]
+    # ips = ["weak_0", "weak_1", "weak_2", "weak_3", "weak_4_0",
+    #        "weak_4_1", "weak_5", "weak_6", "weak_7_0", "weak_7_1",
+    #        "weak_8", "weak_9", "weak_10", "weak_11_0", "weak_11_1"]
     weight = [4, 10, 3, 4, 10, 2, 3, 3, 10, 5, 5, 3, 3, 10, 5]
     replicas = []
-    for i in range(12):
+    for i in range(len(ips)):
         ip = ips[i]
         w = weight[i]
         for j in range(w):
