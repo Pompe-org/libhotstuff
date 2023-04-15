@@ -111,17 +111,21 @@ bool try_send(bool check = true) {
         // Weak client's command
         auto cmd0 = new CommandDummy(cid, cnt++);
         MsgReqCmd msg0(*cmd0);
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
-        }
+        // for (int i = 0; i < BATCH_SIZE; i++) {
+        //     for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
+        // }
+        // Instead, only send to the proposer
+        mn.send_msg(msg0, weak_conns[0]);
         waiting.insert(std::make_pair(cmd0->get_hash(), Request(start_cnt, cmd0, false)));
 
         // Strong client's command
         auto cmd1 = new CommandDummy(cid, cnt++);
         MsgReqCmd msg1(*cmd1);
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
-        }
+        // for (int i = 0; i < BATCH_SIZE; i++) {
+        //     for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
+        // }
+        // Instead, only send to the proposer
+        mn.send_msg(msg0, strong_conns[0]);
         waiting.insert(std::make_pair(cmd1->get_hash(), Request(start_cnt, cmd1, true)));
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
