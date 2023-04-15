@@ -274,9 +274,12 @@ int main(int argc, char **argv) {
     std::sort(strong_finished.begin(), strong_finished.end(), request_smaller);
 
     int weak_score(0), strong_score(0);
-    for (int i = 0; i < 100; i++) {
-        if (i < 5)
-            printf("[RESULT] idx=%d, strong=%d, weak=%d\n", strong_finished[i].idx/2, strong_finished[i].height, weak_finished[i].height);
+    int total = weak_finished.size();
+    if (total > strong_finished.size())
+        total = strong_finished.size();
+    for (int i = 0; i < total; i++) {
+        // if (i < 5)
+        //     printf("[RESULT] idx=%d, strong=%d, weak=%d\n", strong_finished[i].idx/2, strong_finished[i].height, weak_finished[i].height);
         assert(strong_finished[i].idx == weak_finished[i].idx);
 
         if (strong_finished[i].height < weak_finished[i].height)
@@ -284,7 +287,7 @@ int main(int argc, char **argv) {
         else
             weak_score++;
     }
-    printf("[RESULT] strong score=%d, weak score=%d\n", strong_score, weak_score);
+    printf("[RESULT] strong score=%d, weak score=%d, total=%d\n", strong_score, weak_score, total);
 
     // for (int i = 0; i < 5; i++) {
     //     printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
