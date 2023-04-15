@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
         else
             weak_score++;
     }
-    printf("[RESULT] strong score=%d, weak score=%d, total=%d\n", strong_score, weak_score, total);
+    printf("[RESULT] strong score=%d, weak score=%d, factor=%.3f, total=%d\n", strong_score, weak_score, (double)strong_score / weak_score, total);
 
     // for (int i = 0; i < 5; i++) {
     //     printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
