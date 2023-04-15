@@ -63,13 +63,18 @@ struct Request {
 
     command_t cmd;
     size_t confirmed;
+    int idx, height, index;
     salticidae::ElapsedTime et;
     //    std::vector<std::string> timestamps;
-    Request(const command_t &cmd, bool strong): cmd(cmd), strong(strong), confirmed(0)
+    Request(int cnt, const command_t &cmd, bool strong): idx(cnt), cmd(cmd), strong(strong), confirmed(0)
     {
         et.start();
     }
 };
+
+bool request_smaller(const struct Request& left, const struct Request& right) {
+    return left.idx < right.idx;
+}
 
 int BATCH_SIZE, STABLE_PERIOD;
 const int max_waiting_exec = 500;
@@ -102,13 +107,14 @@ bool try_send(bool check = true) {
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
+        int start_cnt = cnt;
         // Weak client's command
         auto cmd0 = new CommandDummy(cid, cnt++);
         MsgReqCmd msg0(*cmd0);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
         }
-        waiting.insert(std::make_pair(cmd0->get_hash(), Request(cmd0, false)));
+        waiting.insert(std::make_pair(cmd0->get_hash(), Request(start_cnt, cmd0, false)));
 
         // Strong client's command
         auto cmd1 = new CommandDummy(cid, cnt++);
@@ -116,7 +122,7 @@ bool try_send(bool check = true) {
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
         }
-        waiting.insert(std::make_pair(cmd1->get_hash(), Request(cmd1, true)));
+        waiting.insert(std::make_pair(cmd1->get_hash(), Request(start_cnt, cmd1, true)));
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
@@ -154,6 +160,14 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     gettimeofday(&tv, nullptr);
     elapsed.push_back(std::make_pair(tv, et.elapsed_sec));
 #endif
+
+    it->second.index = fin.cmd_idx;
+    it->second.height = fin.cmd_height;
+    if (it->second.strong)
+        strong_finished.push_back(it->second);
+    else
+        weak_finished.push_back(it->second);
+
     waiting.erase(it);
     while (try_send());
 }
@@ -252,9 +266,24 @@ int main(int argc, char **argv) {
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
 
-    printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
+    // printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d consensus responses, %d weak + %d strong\n", cid, elapsed.size(), count_weak, count_strong);
+
+    std::sort(weak_finished.begin(), weak_finished.end(), request_smaller);
+    std::sort(strong_finished.begin(), strong_finished.end(), request_smaller);
+
+    int weak_score(0), strong_score(0);
+    for (int i = 0; i < 100; i++) {
+        printf("[DEBUG] idx=%d, strong=(%d,%d), weak=(%d,%d)\n", strong_finished[i].idx, strong_finished[i].height, strong_finished[i].index, weak_finished[i].height, weak_finished[i].index);
+        assert(strong_finished[i].idx == weak_finished[i].idx);
+
+        if (strong_finished[i].height < weak_finished[i].height)
+            strong_score++;
+        else
+            weak_score++;
+    }
+    printf("[DEBUG] strong score=%d, weak score=%d\n", strong_score, weak_score);
 
     // for (int i = 0; i < 5; i++) {
     //     printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
