@@ -681,6 +681,11 @@ void HotStuffBase::start(
      });
 
     cmd_pending.reg_handler(ec, [this](cmd_queue_t &q) {
+        // try to force round-robin
+        static int debug_cnt = 0;
+        if ((++debug_cnt) % 20 == 0) 
+            pmaker->impeach();
+
         std::pair<uint256_t, commit_cb_t> e;
         while (q.try_dequeue(e))
         {
@@ -718,8 +723,6 @@ void HotStuffBase::start(
                             printf("[DEBUG] server %d is the proposer\n", proposer);
                         }
                         on_propose(cmds, pmaker->get_parents());
-                        // try to force round-robin
-                        pmaker->impeach();
                     }
                 });
 
