@@ -37,6 +37,9 @@ target_link_libraries(pompe-client hotstuff_static)
 add_executable(pompe-unbias-2clients pompe_unbias_2clients.cpp)
 target_link_libraries(pompe-unbias-2clients hotstuff_static)
 
+add_executable(large-hotstuff-2clients large_hotstuff_2clients.cpp)
+target_link_libraries(large-hotstuff-2clients hotstuff_static)
+
 add_executable(large-pompe-2clients large_pompe_2clients.cpp)
 target_link_libraries(large-pompe-2clients hotstuff_static)
 
