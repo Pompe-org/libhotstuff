@@ -718,6 +718,8 @@ void HotStuffBase::start(
                             printf("[DEBUG] server %d is the proposer\n", proposer);
                         }
                         on_propose(cmds, pmaker->get_parents());
+                        // try to force round-robin
+                        pmaker->impeach();
                     }
                 });
 
