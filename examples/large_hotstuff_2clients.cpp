@@ -297,6 +297,12 @@ int main(int argc, char **argv) {
     }
     printf("[RESULT] strong score=%d, weak score=%d, factor=%.3f, total=%d\n", strong_score, weak_score, (double)strong_score / weak_score, total);
 
+    freopen(orderlogfile.c_str(), "w", stdout);
+    for (int i = 0; i < total; i++) {
+        printf("%d %d", strong_finished[i].height, weak_finished[i].height);
+    }
+    
+    
     // for (int i = 0; i < 5; i++) {
     //     printf("[DEBUG] Weak client round%d, f+1=%d\n", i, nfaulty*2+1);
     //     for (int j = 0; j < nfaulty*2+1; j++)
