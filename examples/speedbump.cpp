@@ -66,7 +66,7 @@ class Speedbump {
     // For server side
     using Net = salticidae::MsgNetwork<opcode_t>;
     Net mn;
-    Net::conn_t node_conn;
+    Net::conn_t node_conn, leader_conn;
 
     // For debugging
     int num_exec_backwarded, num_order_forwarded, num_order_backwarded;
@@ -185,16 +185,28 @@ class Speedbump {
 
         int leader;
         msg.serialized >> leader;
-        static int debug_limit = 0;
-        if (idx == 0 && debug_limit++ < 100)
-            printf("[DEBUG] speedbump got leader %d\n", leader);
+        // static int debug_limit = 0;
+        // if (idx == 0 && debug_limit++ < 100)
+        //     printf("[DEBUG] speedbump got leader %d\n", leader);
         
         const auto &cmd_hash = cmd->get_hash();
         pending_resp[cmd_hash] = addr;
         //printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
         // Forward client request to one node
         MsgReqCmd msg_forward(*cmd);
-        mn.send_msg(msg_forward, node_conn);
+
+        if (idx == 0) {
+            if (leader == 0) {
+                mn.send_msg(msg_forward, leader_conn);
+            }
+        } else {
+            if (leader == idx) {
+                // send to leader
+                mn.send_msg(msg_forward, leader_conn);
+            } else {
+                mn.send_msg(msg_forward, node_conn);
+            }
+        }
     }
 
     void client_hotstuff_resp_handler(MsgRespCmd &&msg, const conn_t &) {
@@ -212,6 +224,7 @@ public:
               const EventContext &ec,
               NetAddr clisten_addr,
               NetAddr node_addr,
+              NetAddr leader_addr,
               const ClientNetwork<opcode_t>::Config &clinet_config):
         ec(ec),
         idx(idx),
@@ -228,6 +241,7 @@ public:
         mn.reg_handler(salticidae::generic_bind(&Speedbump::client_ordering_exec_resp_handler, this, _1, _2));
         mn.start();
         node_conn = mn.connect_sync(node_addr);
+        leader_conn = mn.connect_sync(leader_addr);
 
         // Connect to client
         cn.reg_handler(salticidae::generic_bind(&Speedbump::client_hotstuff_req_handler, this, _1, _2));
@@ -310,7 +324,7 @@ int main(int argc, char **argv) {
     config_node.add_opt("replica", opt_replicas, Config::APPEND, 'a', "add an replica to the list");
     config_node.parse(argc, argv);
 
-    NetAddr node;
+    NetAddr node, leader;
     std::vector<std::string> raw;
     for (const auto &s: opt_replicas->get())
     {
@@ -328,6 +342,12 @@ int main(int argc, char **argv) {
         node = NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_)));
     }
 
+    {
+        auto _p = split_ip_port_cport(raw[0]);
+        size_t _;
+        //printf("Bump#%d connects to %s, %s\n", idx, _p.first.c_str(), _p.second.c_str());
+        leader = NetAddr(NetAddr(_p.first).ip, htons(stoi(_p.second, &_)));
+    }
     // Setup network with clients
     ClientNetwork<opcode_t>::Config clinet_config;
     clinet_config.max_msg_size(opt_max_cli_msg->get());
@@ -336,7 +356,7 @@ int main(int argc, char **argv) {
         .nworker(opt_clinworker->get());
 
     EventContext ec;
-    auto cs = new Speedbump(idx, raw.size(), ec, NetAddr("0.0.0.0", client_port), node, clinet_config);
+    auto cs = new Speedbump(idx, raw.size(), ec, NetAddr("0.0.0.0", client_port), node, leader, clinet_config);
     auto shutdown = [&](int) { cs->stop(); };
     salticidae::SigEvent ev_sigint(ec, shutdown);
     salticidae::SigEvent ev_sigterm(ec, shutdown);
