@@ -102,15 +102,17 @@ void connect_all_strong() {
 
 
 //static int debug_limit = 0;
+static int debug_leader = 0;
 bool try_send(bool check = true) {
     //if (debug_limit++ > 10) return false;
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
         int start_cnt = cnt;
+
         // Weak client's command
         auto cmd0 = new CommandDummy(cid, cnt++);
-        MsgReqCmd msg0(*cmd0);
+        MsgReqCmd msg0(*cmd0, debug_leader);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: weak_conns) mn.send_msg(msg0, p.second);
         }
@@ -120,13 +122,14 @@ bool try_send(bool check = true) {
 
         // Strong client's command
         auto cmd1 = new CommandDummy(cid, cnt++);
-        MsgReqCmd msg1(*cmd1);
+        MsgReqCmd msg1(*cmd1, debug_leader);
         for (int i = 0; i < BATCH_SIZE; i++) {
             for (auto &p: strong_conns) mn.send_msg(msg1, p.second);
         }
         // Instead, only send to the proposer
         // mn.send_msg(msg0, strong_conns[0]);
         waiting.insert(std::make_pair(cmd1->get_hash(), Request(start_cnt, cmd1, true)));
+        debug_leader = (debug_leader + 1) % weak_conns.size();
 
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
         HOTSTUFF_LOG_INFO("send new cmd %.10s",
@@ -147,8 +150,8 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     auto &et = it->second.et;
     if (it == waiting.end()) return;
 
-    if (it->second.confirmed++ > 0) return; // wait for only 1 ack, from the proposer
-    //if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
+    //if (it->second.confirmed++ > 0) return; // wait for only 1 ack, from the proposer
+    if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
     et.stop();
 
     if (it->second.strong)

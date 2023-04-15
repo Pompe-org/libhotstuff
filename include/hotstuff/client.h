@@ -30,6 +30,9 @@ struct MsgReqCmd {
     command_t cmd;
     MsgReqCmd(const Command &cmd) { serialized << cmd; }
     MsgReqCmd(DataStream &&s): serialized(std::move(s)) {}
+
+    int leader;
+    MsgReqCmd(const Command &cmd, int leader) { serialized << cmd << leader; }
 };
 
 struct MsgRespCmd {

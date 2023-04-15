@@ -182,6 +182,13 @@ class Speedbump {
     void client_hotstuff_req_handler(MsgReqCmd &&msg, const conn_t &conn) {
         const NetAddr addr = conn->get_addr();
         auto cmd = parse_cmd(msg.serialized);
+
+        int leader;
+        msg.serialized >> leader;
+        static int debug_limit = 0;
+        if (idx == 0 && debug_limit++ < 100)
+            printf("[DEBUG] speedbump got leader %d\n", leader);
+        
         const auto &cmd_hash = cmd->get_hash();
         pending_resp[cmd_hash] = addr;
         //printf("Bump #%d forwarding %s\n", idx, std::string(*cmd).c_str());
