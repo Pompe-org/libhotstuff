@@ -299,7 +299,7 @@ int main(int argc, char **argv) {
 
     freopen(orderlogfile.c_str(), "w", stdout);
     for (int i = 0; i < total; i++) {
-        printf("%d %d", strong_finished[i].height, weak_finished[i].height);
+        printf("%d %d\n", strong_finished[i].height, weak_finished[i].height);
     }
     
     
