@@ -275,7 +275,8 @@ int main(int argc, char **argv) {
 
     int weak_score(0), strong_score(0);
     for (int i = 0; i < 100; i++) {
-        printf("[DEBUG] idx=%d, strong=%d, weak=%d\n", strong_finished[i].idx/2, strong_finished[i].height, weak_finished[i].height);
+        if (i < 5)
+            printf("[DEBUG] idx=%d, strong=%d, weak=%d\n", strong_finished[i].idx/2, strong_finished[i].height, weak_finished[i].height);
         assert(strong_finished[i].idx == weak_finished[i].idx);
 
         if (strong_finished[i].height < weak_finished[i].height)

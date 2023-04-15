@@ -710,8 +710,15 @@ void HotStuffBase::start(
                 }
 
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                    if (proposer == get_id())
+                    static bool debug_print = true;
+
+                    if (proposer == get_id()) {
+                        if (debug_print) {
+                            debug_print = false;
+                            printf("[DEBUG] server %d is the proposer\n", proposer);
+                        }
                         on_propose(cmds, pmaker->get_parents());
+                    }
                 });
 
                 return true;
