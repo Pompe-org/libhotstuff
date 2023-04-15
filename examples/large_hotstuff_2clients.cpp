@@ -143,7 +143,8 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     auto &et = it->second.et;
     if (it == waiting.end()) return;
 
-    if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
+    if (++it->second.confirmed >= 0) return; // wait for 1 ack, from the proposer
+    //if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
     et.stop();
 
     if (it->second.strong)
