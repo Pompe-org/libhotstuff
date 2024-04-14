@@ -21,7 +21,8 @@ if __name__ == "__main__":
 
     if args.ips is None:
         # cloudlab
-        ips = ['host0', 'host1', 'host2', 'host3', 'host4', 'host5', 'host6', 'host7', 'host8', 'host9', 'host10', 'host11', 'host12', 'host13', 'host14', 'host15', 'host16', 'host17', 'host18']
+        #ips = ['host0', 'host1', 'host2', 'host3', 'host4', 'host5', 'host6', 'host7', 'host8', 'host9', 'host10', 'host11', 'host12', 'host13', 'host14', 'host15', 'host16', 'host17', 'host18']
+        ips = ["host0", "host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9", "host10", "host11", "host12", "host13", "host14", "host15", "host16", "host17", "host18", "host19", "strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0", "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1", "strong_8", "strong_9", "strong_10", "strong_11_0", "client0"]
         # Local
         #ips = ['127.0.0.1']
         # datacenter small
