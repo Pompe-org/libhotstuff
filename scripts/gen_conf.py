@@ -21,8 +21,12 @@ if __name__ == "__main__":
 
     if args.ips is None:
         # cloudlab
+        # 19 nodes
         #ips = ['host0', 'host1', 'host2', 'host3', 'host4', 'host5', 'host6', 'host7', 'host8', 'host9', 'host10', 'host11', 'host12', 'host13', 'host14', 'host15', 'host16', 'host17', 'host18']
-        ips = ["host0", "host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9", "host10", "host11", "host12", "host13", "host14", "host15", "host16", "host17", "host18", "host19", "strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0", "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1", "strong_8", "strong_9", "strong_10", "strong_11_0", "client0"]
+        # 34 nodes
+        #ips = ["host0", "host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9", "host10", "host11", "host12", "host13", "host14", "host15", "host16", "host17", "host18", "host19", "strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0", "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1", "strong_8", "strong_9", "strong_10", "strong_11_0", "client0"]
+        # 49 nodes
+        ips = ["host0", "host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9", "host10", "host11", "host12", "host13", "host14", "host15", "host16", "host17", "host18", "host19", "strong_0", "strong_1", "strong_2", "strong_3", "strong_4_0", "strong_4_1", "strong_5", "strong_6", "strong_7_0", "strong_7_1", "strong_8", "strong_9", "strong_10", "strong_11_0", "strong_11_1", "weak_0", "weak_1", "weak_2", "weak_3", "weak_4_0", "weak_4_1", "weak_5", "weak_6", "weak_7_0", "weak_7_1", "weak_8", "weak_9", "weak_10", "weak_11_0"]
         # Local
         #ips = ['127.0.0.1']
         # datacenter small
