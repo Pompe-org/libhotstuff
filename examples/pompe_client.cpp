@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
     auto opt_idx = Config::OptValInt::create(0);
     auto opt_replicas = Config::OptValStrVec::create();
     auto opt_max_iter_num = Config::OptValInt::create(-1);
-    auto opt_max_async_num = Config::OptValInt::create(100);
+    auto opt_max_async_num = Config::OptValInt::create(10);
     auto opt_cid = Config::OptValInt::create(-1);
 
     auto shutdown = [&](int) { ec.stop(); };
@@ -306,6 +306,25 @@ int main(int argc, char **argv) {
     //printf("client write to order log file %s, %lu entries\n", orderlogfile.c_str(), elapsed.size());
     //printf("client write to exec log file %s, %lu entries\n", execlogfile.c_str(), elapsed_exec.size());
     printf("[DEBUG] client%d receives %d ordering, %d consensus responses\n", cid, elapsed.size(), count_exec);
+
+    /* Get the median and 90% ordering/consensus latencies */
+    std::vector<double> ordering_latencies;
+    for (const auto &e: elapsed)
+    {
+      ordering_latencies.push_back(e.second);
+    }
+    std::sort(ordering_latencies.begin(), ordering_latencies.end());
+    printf("[DEBUG] client%d ordering latency: median = %.6f sec, 90% = %.6f sec\n", cid, ordering_latencies[elapsed.size() * 0.5], ordering_latencies[elapsed.size() * 0.9]);
+
+    std::vector<double> consensus_latencies;
+    for (const auto &e: elapsed_exec)
+    {
+      consensus_latencies.push_back(e.second);
+    }
+    std::sort(consensus_latencies.begin(), consensus_latencies.end());
+    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec\n", cid, consensus_latencies[elapsed.size() * 0.5], consensus_latencies[elapsed.size() * 0.9]);
+
+    /* Produce the log file */
     
     freopen(execlogfile.c_str(), "w", stdout);
 
