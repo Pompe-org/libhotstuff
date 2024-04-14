@@ -1,0 +1,10 @@
+0:host0:30000;40000	./conf-gen/hotstuff.gen-sec0.conf
+1:host1:30000;40000	./conf-gen/hotstuff.gen-sec1.conf
+2:host2:30000;40000	./conf-gen/hotstuff.gen-sec2.conf
+3:host3:30000;40000	./conf-gen/hotstuff.gen-sec3.conf
+4:host4:30000;40000	./conf-gen/hotstuff.gen-sec4.conf
+5:host5:30000;40000	./conf-gen/hotstuff.gen-sec5.conf
+6:host6:30000;40000	./conf-gen/hotstuff.gen-sec6.conf
+7:host7:30000;40000	./conf-gen/hotstuff.gen-sec7.conf
+8:host8:30000;40000	./conf-gen/hotstuff.gen-sec8.conf
+9:host9:30000;40000	./conf-gen/hotstuff.gen-sec9.conf
