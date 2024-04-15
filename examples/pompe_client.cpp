@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
       consensus_latencies.push_back(e.second);
     }
     std::sort(consensus_latencies.begin(), consensus_latencies.end());
-    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec\n", cid, consensus_latencies[elapsed.size() * 0.5], consensus_latencies[elapsed.size() * 0.9]);
+    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec\n", cid, consensus_latencies[elapsed_exec.size() * 0.5], consensus_latencies[elapsed_exec.size() * 0.9]);
 
     /* Produce the log file */
     
