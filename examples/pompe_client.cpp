@@ -154,7 +154,12 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     while (try_send());
 }
 
-void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &) {
+// TODO: move stake information to client config argument
+const int STAKE_WEIGHT[] = {3, 11, 3, 4, 15, 6, 6, 11, 4, 3, 3, 11};
+const int QUORUM_SZ      = 26 * 2 + 1;
+const int MEDIAN_IDX     = 26;
+
+void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::conn_t &conn) {
     //HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = msg.cmd_hash;
     auto it = waiting.find(cmd_hash);
@@ -162,12 +167,29 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     auto &et = it->second.et;    
 
     //std::string t = std::string(get_hex10(msg.timestamp));
-    it->second.timestamps.push_back(msg.timestamp_us);
-    if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // wait for 2f + 1 timestamps
+    //it->second.timestamps.push_back(msg.timestamp_us);
+    //if (++it->second.ordering_rtt1 != nfaulty*2+1) return; // wait for 2f + 1 timestamps
+
+    // wait for a quorum based on STAKE_WEIGHT
+    int stake = 0;
+    const NetAddr addr = conn->get_addr();
+    for( int i=0; i<replicas.size(); i++ ) {
+        if( replicas[i].ip==addr.ip && replicas[i].port==addr.port ) {
+            stake = STAKE_WEIGHT[i];
+            break;
+        }
+    }
+    assert(stake != 0);
+    it->second.ordering_rtt1 += stake;
+    for(int i=0; i<stake; i++) it->second.timestamps.push_back(msg.timestamp_us);
+    if( !(it->second.ordering_rtt1 >= QUORUM_SZ &&
+          it->second.ordering_rtt1 - stake < QUORUM_SZ ) )
+        return;
 
     // pick the median timestamp, the f+1 th one
     std::sort(it->second.timestamps.begin(), it->second.timestamps.end());
-    uint64_t median = it->second.timestamps[nfaulty + 1];
+    //uint64_t median = it->second.timestamps[nfaulty + 1];
+    uint64_t median = it->second.timestamps[ MEDIAN_IDX ];
     median_timestamps.push_back(std::make_pair(it->second.sent_time, median));
     
     // send the second rtt message of ordering phase
