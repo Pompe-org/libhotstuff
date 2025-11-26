@@ -64,8 +64,18 @@ struct Request {
     salticidae::ElapsedTime et;
     salticidae::ElapsedTime et_exec;
     //    std::vector<std::string> timestamps;
+    uint64_t sent_time;
     std::vector<uint64_t> timestamps;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) { et.start(); et_exec.start(); }
+    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) {
+        struct timeval tv;
+        gettimeofday(&tv, nullptr);
+        sent_time = tv.tv_sec;
+        sent_time *= 1000 * 1000;
+        sent_time += tv.tv_usec;
+
+        et.start();
+        et_exec.start();
+    }
 };
 
 int BATCH_SIZE, STABLE_PERIOD;
@@ -77,6 +87,7 @@ std::unordered_map<ReplicaID, Net::conn_t> conns;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
+std::vector<std::pair<uint64_t, uint64_t>> median_timestamps;
 Net mn(ec, Net::Config());
 
 void connect_all() {
@@ -157,6 +168,7 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     // pick the median timestamp, the f+1 th one
     std::sort(it->second.timestamps.begin(), it->second.timestamps.end());
     uint64_t median = it->second.timestamps[nfaulty + 1];
+    median_timestamps.push_back(std::make_pair(it->second.sent_time, median));
     
     // send the second rtt message of ordering phase
     // printf("here1\n");
@@ -339,14 +351,20 @@ int main(int argc, char **argv) {
     
     freopen(orderlogfile.c_str(), "w", stdout);
 
-    for (const auto &e: elapsed)
-    {
-        char fmt[64];
-        struct tm *tmp = localtime(&e.first.tv_sec);
-        strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
-        fprintf(stdout, fmt, e.first.tv_usec, e.second);
-    }
+    // Latency
+    // for (const auto &e: elapsed)
+    // {
+    //     char fmt[64];
+    //     struct tm *tmp = localtime(&e.first.tv_sec);
+    //     strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u [hotstuff info] %%.6f\n", tmp);
+    //     fprintf(stdout, fmt, e.first.tv_usec, e.second);
+    // }
 
+    // Median timestamps
+    for (const auto &e: median_timestamps)
+    {
+        fprintf(stdout, "%lld %lld delta=%lld\n", e.first, e.second, e.second-e.first);
+    }
 
     fclose(stdout);
 
