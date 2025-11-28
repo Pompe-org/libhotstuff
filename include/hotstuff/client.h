@@ -95,6 +95,14 @@ class CommandDummy: public Command {
         return hash;
     }
 
+    uint32_t get_cid() {
+        return cid;
+    }
+
+    uint32_t get_n() {
+        return n;
+    }
+
     bool verify() const override {
         return true;
     }

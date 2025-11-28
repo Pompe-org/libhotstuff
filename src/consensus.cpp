@@ -214,6 +214,8 @@ void HotStuffCore::on_receive_proposal(const Proposal &prop) {
     if (bnew->qc_ref)
         on_qc_finish(bnew->qc_ref);
     on_receive_proposal_(prop);
+    // if( bnew->height == 10 )
+    // printf("server #%u tries to vote for blk10 opinion=%u\n", id, opinion);
     if (opinion && !vote_disabled)
         do_vote(prop.proposer,
             Vote(id, bnew->get_hash(),
@@ -224,6 +226,7 @@ void HotStuffCore::on_receive_vote(const Vote &vote) {
     LOG_PROTO("got %s", std::string(vote).c_str());
     LOG_PROTO("now state: %s", std::string(*this).c_str());
     block_t blk = get_delivered_blk(vote.blk_hash);
+    //if( id==0 || id==1 ) printf("server #%u gets vote for blk %u\n", id, blk->height);
     assert(vote.cert);
     size_t qsize = blk->voted.size();
     if (qsize >= config.nmajority) return;
@@ -287,6 +290,8 @@ void HotStuffCore::add_replica(ReplicaID rid, const PeerId &peer_id,
 }
 
 promise_t HotStuffCore::async_qc_finish(const block_t &blk) {
+    //if (id == 0 || id == 1)
+    //printf("async_qc_finish: id=%lu, height=%lu, votesz=%lu\n", id, blk->get_height(), blk->voted.size());
     if (blk->voted.size() >= config.nmajority)
         return promise_t([](promise_t &pm) {
             pm.resolve();
@@ -301,6 +306,7 @@ void HotStuffCore::on_qc_finish(const block_t &blk) {
     auto it = qc_waiting.find(blk);
     if (it != qc_waiting.end())
     {
+        //printf("on_qc_finish: id=%lu, height=%lu, votesz=%lu\n", id, blk->get_height(), blk->voted.size());
         it->second.resolve();
         qc_waiting.erase(it);
     }

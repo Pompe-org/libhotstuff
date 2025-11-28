@@ -159,6 +159,7 @@ class HotStuffBase: public HotStuffCore {
     std::unordered_map<const uint256_t, BlockDeliveryContext> blk_delivery_waiting;
     std::unordered_map<const uint256_t, commit_cb_t> decision_waiting;
     using cmd_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, commit_cb_t>>;
+    std::unordered_map<const uint256_t, uint32_t> leader_schedule;
     cmd_queue_t cmd_pending;
     std::queue<uint256_t> cmd_pending_buffer;
 
@@ -220,6 +221,7 @@ class HotStuffBase: public HotStuffCore {
 
     /* Submit the command to be decided. */
     void exec_command(uint256_t cmd_hash, commit_cb_t callback);
+    void exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback);
     void start(std::vector<std::tuple<NetAddr, pubkey_bt, uint256_t>> &&replicas,
                 bool ec_loop = false);
 

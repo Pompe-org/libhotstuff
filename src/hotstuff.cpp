@@ -80,6 +80,18 @@ void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
 }
 
+// TODO: improve this function
+void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback) {
+    // TODO: Improve the leader schedule code below
+    //       The current version does NOT consider stake weight
+    #define NCLIENTS 2
+    #define NSERVERS 12
+    #define NSLOTS_PER_LEADER 10
+    #define NCMDS_PER_CLIENT (NSLOTS_PER_LEADER / NCLIENTS)
+    leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+    cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
+}
+
 void HotStuffBase::on_fetch_blk(const block_t &blk) {
 #ifdef HOTSTUFF_BLK_PROFILE
     blk_profiler.get_tx(blk->get_hash());
@@ -380,14 +392,14 @@ void HotStuffBase::do_broadcast_proposal(const Proposal &prop) {
 
 void HotStuffBase::do_vote(ReplicaID last_proposer, const Vote &vote) {
     pmaker->beat_resp(last_proposer)
-            .then([this, vote](ReplicaID proposer) {
+            .then([this, vote, last_proposer](ReplicaID proposer) {
         if (proposer == get_id())
         {
-            throw HotStuffError("unreachable line");
-            //on_receive_vote(vote);
+            //throw HotStuffError("unreachable line");
+            on_receive_vote(vote);
         }
         else
-            pn.send_msg(MsgVote(vote), get_config().get_peer_id(proposer));
+            pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
     });
 }
 
@@ -440,15 +452,24 @@ void HotStuffBase::start(
         std::pair<uint256_t, commit_cb_t> e;
         while (q.try_dequeue(e))
         {
-            ReplicaID proposer = pmaker->get_proposer();
+            //ReplicaID proposer = pmaker->get_proposer();
+            uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
+            ReplicaID proposer = (slot / 10) % 12;
 
             const auto &cmd_hash = e.first;
             auto it = decision_waiting.find(cmd_hash);
             if (it == decision_waiting.end())
                 it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
-            else
-                e.second(Finality(id, 0, 0, 0, cmd_hash, uint256_t()));
-            if (proposer != get_id()) continue;
+            // else
+            //     e.second(Finality(id, 0, 0, 0, cmd_hash, uint256_t()));
+            if (proposer != get_id() || leader_schedule[cmd_hash] != get_id()) {
+                if( leader_schedule[cmd_hash] == get_id() ) {
+                   //printf("server #%u puts the command back for later use\n", get_id());
+                   q.enqueue(e);
+                   break;
+                }
+                continue;
+            }
             cmd_pending_buffer.push(cmd_hash);
             if (cmd_pending_buffer.size() >= blk_size)
             {
@@ -458,13 +479,21 @@ void HotStuffBase::start(
                     cmds.push_back(cmd_pending_buffer.front());
                     cmd_pending_buffer.pop();
                 }
+                //printf("server #%u calls pmaker->beat()\n", get_id());
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                    if (proposer == get_id())
+                    //if (proposer == get_id()) {
+                    uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
+                    if( (slot / 10) % 12 == get_id() ) { /* rotate based on id */
+                        printf("server #%u proposing for slot#%u\n", get_id(), slot);
                         on_propose(cmds, pmaker->get_parents());
+                    } else {
+                        //printf("server #%u NOT proposing for slot#%u\n", get_id(), slot);
+                    }
                 });
                 return true;
             }
         }
+
         return false;
     });
 }

@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
     while (try_send());
     ec.dispatch();
 
-    printf("client%d executed %lu commands\n", cid, elapsed.size());
+    printf("client%d sent %lu, executed %lu commands, max_async=%u\n", cid, cnt, elapsed.size(), max_async_num);
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
     for (const auto &e: elapsed)

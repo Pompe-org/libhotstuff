@@ -272,6 +272,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
             (pm_qc_finish = hsc->async_qc_finish(last_proposed))
                 .then([this, pm]() {
                     HOTSTUFF_LOG_PROTO("got QC, propose a new block");
+                    //printf("server #%u got QC \n", hsc->get_id());
                     pm.resolve(proposer);
                 });
             locked = true;
@@ -388,17 +389,17 @@ class PMRoundRobinProposer: virtual public PaceMaker {
     }
 
     promise_t beat() override {
-        if (!rotating && proposer == hsc->get_id())
-        {
+        // if (!rotating && proposer == hsc->get_id())
+        // {
             promise_t pm;
             pending_beats.push(pm);
             proposer_schedule_next();
             return pm;
-        }
-        else
-            return promise_t([proposer=proposer](promise_t &pm) {
-                pm.resolve(proposer);
-            });
+        // }
+        // else
+        //     return promise_t([proposer=proposer](promise_t &pm) {
+        //         pm.resolve(proposer);
+        //     });
     }
 
     promise_t beat_resp(ReplicaID last_proposer) override {

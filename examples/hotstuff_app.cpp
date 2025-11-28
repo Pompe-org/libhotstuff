@@ -94,9 +94,11 @@ class HotStuffApp: public HotStuff {
 
     void client_request_cmd_handler(MsgReqCmd &&, const conn_t &);
 
-    static command_t parse_cmd(DataStream &s) {
+    static command_t parse_cmd(DataStream &s, uint32_t * cid, uint32_t * n) {
         auto cmd = new CommandDummy();
         s >> *cmd;
+        *cid = cmd->get_cid();
+        *n = cmd->get_n();
         return cmd;
     }
 
@@ -163,7 +165,7 @@ int main(int argc, char **argv) {
     auto opt_fixed_proposer = Config::OptValInt::create(1);
     auto opt_base_timeout = Config::OptValDouble::create(1);
     auto opt_prop_delay = Config::OptValDouble::create(1);
-    auto opt_imp_timeout = Config::OptValDouble::create(11);
+    auto opt_imp_timeout = Config::OptValDouble::create(1000);
     auto opt_nworker = Config::OptValInt::create(1);
     auto opt_repnworker = Config::OptValInt::create(1);
     auto opt_repburst = Config::OptValInt::create(100);
@@ -336,10 +338,12 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
 
 void HotStuffApp::client_request_cmd_handler(MsgReqCmd &&msg, const conn_t &conn) {
     const NetAddr addr = conn->get_addr();
-    auto cmd = parse_cmd(msg.serialized);
+    uint32_t cid, n;
+    auto cmd = parse_cmd(msg.serialized, &cid, &n);
     const auto &cmd_hash = cmd->get_hash();
     HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
-    exec_command(cmd_hash, [this, addr](Finality fin) {
+    //if( get_id()==1 ) printf("Received cmd cid=%lu, n=%lu\n", cid, n);
+    exec_command_pos(cmd_hash, n, [this, addr](Finality fin) {
         resp_queue.enqueue(std::make_pair(fin, addr));
     });
 }
