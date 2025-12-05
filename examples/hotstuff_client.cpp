@@ -51,10 +51,11 @@ uint32_t cnt = 0;
 uint32_t nfaulty;
 
 struct Request {
+    uint32_t idx;
     command_t cmd;
     size_t confirmed;
     salticidae::ElapsedTime et;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0) { et.start(); }
+    Request(const command_t &cmd, uint32_t n): cmd(cmd), confirmed(0), idx(n) { et.start(); }
 };
 
 using Net = salticidae::MsgNetwork<opcode_t>;
@@ -81,7 +82,7 @@ bool try_send(bool check = true) {
                             get_hex(cmd->get_hash()).c_str());
 #endif
         waiting.insert(std::make_pair(
-            cmd->get_hash(), Request(cmd)));
+            cmd->get_hash(), Request(cmd, cmd->get_n())));
         if (max_iter_num > 0)
             max_iter_num--;
         return true;

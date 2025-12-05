@@ -171,6 +171,13 @@ block_t HotStuffCore::on_propose(const std::vector<uint256_t> &cmds,
     update(bnew);
     Proposal prop(id, bnew, nullptr);
     LOG_PROTO("propose %s", std::string(*bnew).c_str());
+
+    auto it = qc_waiting.find(bnew);
+    if (it == qc_waiting.end()) {
+        it = qc_waiting.insert(std::make_pair(bnew, promise_t())).first;
+        // printf("on_propose inserts qc_waiting %.10s\n", get_hex10(bnew->get_hash()).c_str());
+    }
+    // printf("slot#%u has hash %.10s\n", parents[0]->height+1, get_hex10(bnew_hash).c_str());
     /* self-vote */
     if (bnew->height <= vheight)
         throw std::runtime_error("new block should be higher than vheight");
@@ -292,13 +299,17 @@ void HotStuffCore::add_replica(ReplicaID rid, const PeerId &peer_id,
 promise_t HotStuffCore::async_qc_finish(const block_t &blk) {
     //if (id == 0 || id == 1)
     //printf("async_qc_finish: id=%lu, height=%lu, votesz=%lu\n", id, blk->get_height(), blk->voted.size());
+    auto it = qc_waiting.find(blk);
+    if (it == qc_waiting.end()) {
+        it = qc_waiting.insert(std::make_pair(blk, promise_t())).first;
+        // printf("async_qc_finish inserts qc_waiting %.10s\n", get_hex10(blk->get_hash()).c_str());
+    }
+
     if (blk->voted.size() >= config.nmajority)
         return promise_t([](promise_t &pm) {
             pm.resolve();
         });
-    auto it = qc_waiting.find(blk);
-    if (it == qc_waiting.end())
-        it = qc_waiting.insert(std::make_pair(blk, promise_t())).first;
+
     return it->second;
 }
 
@@ -306,10 +317,15 @@ void HotStuffCore::on_qc_finish(const block_t &blk) {
     auto it = qc_waiting.find(blk);
     if (it != qc_waiting.end())
     {
-        //printf("on_qc_finish: id=%lu, height=%lu, votesz=%lu\n", id, blk->get_height(), blk->voted.size());
+        // printf("on_qc_finish: id=%lu, height=%lu, votesz=%lu, hash=%.10s\n", id, blk->get_height(), blk->voted.size(),
+        //           get_hex10(blk->get_hash()).c_str());
         it->second.resolve();
         qc_waiting.erase(it);
-    }
+    } // else {
+    //     if(id == (blk->get_height() / 10) % 12)
+    //     printf("!!! on_qc_finish SKIPs id=%lu, height=%lu, hash=%.10s\n", id, blk->get_height(),
+    //              get_hex10(blk->get_hash()).c_str());
+    // }
 }
 
 promise_t HotStuffCore::async_wait_proposal() {

@@ -38,6 +38,7 @@ class PaceMaker {
     /** Get a promise resolved when the pace maker thinks it is a *good* time
      * to issue new commands. When promise is resolved, the replica should
      * propose the command. */
+    virtual void unlock() = 0;
     virtual promise_t beat() = 0;
     /** Get the current proposer. */
     virtual ReplicaID get_proposer() = 0;
@@ -178,6 +179,10 @@ class PMWaitQC: public virtual PaceMaker {
         return hsc->get_id();
     }
 
+    void unlock() override {
+        locked = false;
+    }
+
     promise_t beat() override {
         promise_t pm;
         pending_beats.push(pm);
@@ -268,7 +273,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
         {
             auto pm = pending_beats.front();
             pending_beats.pop();
-            pm_qc_finish.reject();
+            //pm_qc_finish.reject();
             (pm_qc_finish = hsc->async_qc_finish(last_proposed))
                 .then([this, pm]() {
                     HOTSTUFF_LOG_PROTO("got QC, propose a new block");
@@ -285,6 +290,8 @@ class PMRoundRobinProposer: virtual public PaceMaker {
                 [this](const Proposal &prop) {
             last_proposed = prop.blk;
             locked = false;
+        //if (hsc->get_id() < 4)
+            // printf("server%u updates last_proposed=%u, locked=%u pending_beats.size=%u\n", hsc->get_id(), last_proposed->get_height(), locked, pending_beats.size());
             proposer_schedule_next();
             proposer_update_last_proposed();
         });
@@ -333,7 +340,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
     void stop_rotate() {
         timer.del();
         HOTSTUFF_LOG_PROTO("Pacemaker: stop rotation at %d", proposer);
-        pm_qc_finish.reject();
+        //pm_qc_finish.reject();
         pm_wait_propose.reject();
         pm_qc_manual.reject();
         rotating = false;
@@ -388,6 +395,9 @@ class PMRoundRobinProposer: virtual public PaceMaker {
         return proposer;
     }
 
+    void unlock() override {
+        locked = false;
+    }
     promise_t beat() override {
         // if (!rotating && proposer == hsc->get_id())
         // {

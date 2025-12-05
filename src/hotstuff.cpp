@@ -78,6 +78,7 @@ void MsgRespBlock::postponed_parse(HotStuffCore *hsc) {
 // TODO: improve this function
 void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
+    assert(false); // use exec_command_pos
 }
 
 // TODO: improve this function
@@ -88,8 +89,20 @@ void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit
     #define NSERVERS 12
     #define NSLOTS_PER_LEADER 10
     #define NCMDS_PER_CLIENT (NSLOTS_PER_LEADER / NCLIENTS)
-    leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+
+    std::lock_guard<std::mutex> lock(leader_schedule_mutex);
+    if (leader_schedule.find(cmd_hash) == leader_schedule.end()) {
+        leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+    } else {
+        printf("WRONG! server#u changes leader of %.10s from %u to %u\n",
+               get_id(), get_hex10(cmd_hash).c_str(), leader_schedule[cmd_hash], (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS);
+        // leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+    }
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
+    cmd_pending_enq_cnt++;
+    // if( get_id() ==  (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS )
+    //     printf("id=%u exec_command_pos inserts cmd=%.10s, enq_cnt=%u, deq_cnt=%u\n", get_id(),
+    //            get_hex10(cmd_hash).c_str(), cmd_pending_enq_cnt, cmd_pending_deq_cnt);
 }
 
 void HotStuffBase::on_fetch_blk(const block_t &blk) {
@@ -355,6 +368,7 @@ HotStuffBase::HotStuffBase(uint32_t blk_size,
         pn(ec, netconfig),
         pmaker(std::move(pmaker)),
 
+        cmd_pending_enq_cnt(0), cmd_pending_deq_cnt(0),
         fetched(0), delivered(0),
         nsent(0), nrecv(0),
         part_parent_size(0),
@@ -398,8 +412,10 @@ void HotStuffBase::do_vote(ReplicaID last_proposer, const Vote &vote) {
             //throw HotStuffError("unreachable line");
             on_receive_vote(vote);
         }
-        else
-            pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
+        //else
+        pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
+        // if( get_id() == 10 )
+        //     printf("server #10 sends vote back to last_proposer=%u\n", last_proposer);
     });
 }
 
@@ -452,6 +468,7 @@ void HotStuffBase::start(
         std::pair<uint256_t, commit_cb_t> e;
         while (q.try_dequeue(e))
         {
+            cmd_pending_deq_cnt++;
             //ReplicaID proposer = pmaker->get_proposer();
             uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
             ReplicaID proposer = (slot / 10) % 12;
@@ -462,14 +479,24 @@ void HotStuffBase::start(
                 it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
             // else
             //     e.second(Finality(id, 0, 0, 0, cmd_hash, uint256_t()));
-            if (proposer != get_id() || leader_schedule[cmd_hash] != get_id()) {
-                if( leader_schedule[cmd_hash] == get_id() ) {
-                   //printf("server #%u puts the command back for later use\n", get_id());
-                   q.enqueue(e);
-                   break;
-                }
+
+            std::lock_guard<std::mutex> lock(leader_schedule_mutex);
+            if (leader_schedule[cmd_hash] != get_id()) {
+                // if(get_id()==1)
+                    // printf("server#%u abandons cmd=%.10s leader=%u\n",
+                    //        get_id(),
+                    //        get_hex10(cmd_hash).c_str(),
+                    //        leader_schedule[cmd_hash]);
                 continue;
             }
+            // Now, assume that cmd_hash should be proposed by me
+            if (proposer != get_id()) {
+                //printf("server #%u puts the command back for later use\n", get_id());
+                cmd_pending.enqueue(e);
+                cmd_pending_enq_cnt++;
+                break;
+            }
+            // printf("server %u pushes cmd_hash=%.10s\n", get_id(), get_hex10(cmd_hash).c_str());
             cmd_pending_buffer.push(cmd_hash);
             if (cmd_pending_buffer.size() >= blk_size)
             {
@@ -479,18 +506,25 @@ void HotStuffBase::start(
                     cmds.push_back(cmd_pending_buffer.front());
                     cmd_pending_buffer.pop();
                 }
-                //printf("server #%u calls pmaker->beat()\n", get_id());
+                // printf("server #%u calls pmaker->beat() when slot=%u, cmd_hash=%.10s, pending=%u-%u\n", get_id(), slot,
+                //         get_hex10(cmd_hash).c_str(), cmd_pending_enq_cnt, cmd_pending_deq_cnt);
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
                     //if (proposer == get_id()) {
                     uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
                     if( (slot / 10) % 12 == get_id() ) { /* rotate based on id */
-                        printf("server #%u proposing for slot#%u\n", get_id(), slot);
+                        // printf("server #%u proposing for slot#%u\n", get_id(), slot);
                         on_propose(cmds, pmaker->get_parents());
                     } else {
-                        //printf("server #%u NOT proposing for slot#%u\n", get_id(), slot);
+                        // This means that I, as the current leader, has finished the last slot
+                        // in the leader schedule before switching to another leader; unlock()
+                        // in order to wait for the next time me being the leader.
+                        pmaker->unlock();
+                        // printf("server #%u NOT proposing for slot#%u\n", get_id(), slot);
                     }
                 });
                 return true;
+            } else {
+                assert(false);
             }
         }
 

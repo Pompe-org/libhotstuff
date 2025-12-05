@@ -19,6 +19,7 @@
 #define _HOTSTUFF_CORE_H
 
 #include <queue>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -159,8 +160,10 @@ class HotStuffBase: public HotStuffCore {
     std::unordered_map<const uint256_t, BlockDeliveryContext> blk_delivery_waiting;
     std::unordered_map<const uint256_t, commit_cb_t> decision_waiting;
     using cmd_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, commit_cb_t>>;
-    std::unordered_map<const uint256_t, uint32_t> leader_schedule;
+    std::unordered_map<const uint256_t, ReplicaID> leader_schedule;
+    std::mutex leader_schedule_mutex;
     cmd_queue_t cmd_pending;
+    uint32_t cmd_pending_enq_cnt, cmd_pending_deq_cnt;
     std::queue<uint256_t> cmd_pending_buffer;
 
     /* statistics */
