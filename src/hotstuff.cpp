@@ -98,8 +98,15 @@ void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit
                get_id(), get_hex10(cmd_hash).c_str(), leader_schedule[cmd_hash], (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS);
         // leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
     }
-    cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
-    cmd_pending_enq_cnt++;
+    if ( get_id() == (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS ) {
+        cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
+        cmd_pending_enq_cnt++;
+    }
+
+    // const auto &cmd_hash = e.first;
+    auto it = decision_waiting.find(cmd_hash);
+    if (it == decision_waiting.end())
+        it = decision_waiting.insert(std::make_pair(cmd_hash, callback)).first;
     // if( get_id() ==  (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS )
     //     printf("id=%u exec_command_pos inserts cmd=%.10s, enq_cnt=%u, deq_cnt=%u\n", get_id(),
     //            get_hex10(cmd_hash).c_str(), cmd_pending_enq_cnt, cmd_pending_deq_cnt);
@@ -465,38 +472,20 @@ void HotStuffBase::start(
         ec.dispatch();
 
     cmd_pending.reg_handler(ec, [this](cmd_queue_t &q) {
+        uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
+        ReplicaID proposer = (slot / 10) % 12;
+        //ReplicaID proposer = pmaker->get_proposer();
+        if (proposer != get_id()) {
+            return false;
+        }
+
         std::pair<uint256_t, commit_cb_t> e;
         while (q.try_dequeue(e))
         {
             cmd_pending_deq_cnt++;
-            //ReplicaID proposer = pmaker->get_proposer();
-            uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
-            ReplicaID proposer = (slot / 10) % 12;
-
-            const auto &cmd_hash = e.first;
-            auto it = decision_waiting.find(cmd_hash);
-            if (it == decision_waiting.end())
-                it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
-            // else
-            //     e.second(Finality(id, 0, 0, 0, cmd_hash, uint256_t()));
-
             std::lock_guard<std::mutex> lock(leader_schedule_mutex);
-            if (leader_schedule[cmd_hash] != get_id()) {
-                // if(get_id()==1)
-                    // printf("server#%u abandons cmd=%.10s leader=%u\n",
-                    //        get_id(),
-                    //        get_hex10(cmd_hash).c_str(),
-                    //        leader_schedule[cmd_hash]);
-                continue;
-            }
-            // Now, assume that cmd_hash should be proposed by me
-            if (proposer != get_id()) {
-                //printf("server #%u puts the command back for later use\n", get_id());
-                cmd_pending.enqueue(e);
-                cmd_pending_enq_cnt++;
-                break;
-            }
             // printf("server %u pushes cmd_hash=%.10s\n", get_id(), get_hex10(cmd_hash).c_str());
+            const auto &cmd_hash = e.first;
             cmd_pending_buffer.push(cmd_hash);
             if (cmd_pending_buffer.size() >= blk_size)
             {
