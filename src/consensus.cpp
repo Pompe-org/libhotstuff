@@ -165,8 +165,7 @@ block_t HotStuffCore::on_propose(const std::vector<uint256_t> &cmds,
             nullptr,
             nullptr
         ));
-    printf("TMP server%u proposes blk.height=%u hash=%.10s rehash=%.10s\n", id, parents[0]->height + 1,
-           get_hex10(bnew->get_hash()).c_str(),get_hex10(salticidae::get_hash(*bnew)).c_str() );
+
     {
         // std::lock_guard<std::mutex> guard(qc_waiting_lock);
         qc_waiting_lock.lock();
@@ -181,7 +180,6 @@ block_t HotStuffCore::on_propose(const std::vector<uint256_t> &cmds,
 
     const uint256_t bnew_hash = bnew->get_hash();
     bnew->self_qc = create_quorum_cert(bnew_hash);
-    printf("TMP height=%u, rehash=%.10s\n", parents[0]->height+1, get_hex10(salticidae::get_hash(*bnew)).c_str());
     on_deliver_blk(bnew);
     update(bnew);
     Proposal prop(id, bnew, nullptr);
@@ -233,10 +231,10 @@ void HotStuffCore::on_receive_proposal(const Proposal &prop) {
     //     on_qc_finish(bnew->qc_ref);
     on_receive_proposal_(prop);
 
-    printf("server%u do_vote #2 for proposer=%u blk.height=%u, hash=%.10s, rehash=%.10s\n", id,
-           prop.proposer,
-           bnew->get_height(), get_hex10(bnew->get_hash()).c_str(),
-           get_hex10(*bnew).c_str());
+    // printf("server%u do_vote #2 for proposer=%u blk.height=%u, hash=%.10s, rehash=%.10s\n", id,
+    //        prop.proposer,
+    //        bnew->get_height(), get_hex10(bnew->get_hash()).c_str(),
+    //        get_hex10(*bnew).c_str());
     if (opinion && !vote_disabled)
         do_vote(prop.proposer,
             Vote(id, bnew->get_hash(),
@@ -266,9 +264,9 @@ void HotStuffCore::on_receive_vote(const Vote &vote) {
     {
         qc->compute();
         update_hqc(blk, qc);
-        printf("on_receive_vote: voter=%u, blk.height=%u, hash=%.10s vote.blk_hash=%.10s\n", vote.voter, blk->get_height(),
-               get_hex10(blk->get_hash()).c_str(),
-               get_hex10(vote.blk_hash).c_str());
+        // printf("on_receive_vote: voter=%u, blk.height=%u, hash=%.10s vote.blk_hash=%.10s\n", vote.voter, blk->get_height(),
+        //        get_hex10(blk->get_hash()).c_str(),
+        //        get_hex10(vote.blk_hash).c_str());
         on_qc_finish(blk);
     }
 }
@@ -322,9 +320,9 @@ promise_t HotStuffCore::async_qc_finish(const block_t &blk) {
     auto it = qc_waiting.find(blk);
     if (it == qc_waiting.end())
         it = qc_waiting.insert(std::make_pair(blk, promise_t())).first;
-    printf("TMP WRONG inserts blk.height=%u hash=%.10s\n",
-           blk->get_height(),
-           get_hex10(blk->get_hash()).c_str());
+    // printf("TMP WRONG inserts blk.height=%u hash=%.10s\n",
+    //        blk->get_height(),
+    //        get_hex10(blk->get_hash()).c_str());
     qc_waiting_lock.unlock();
     return it->second;
 }
@@ -340,18 +338,18 @@ void HotStuffCore::on_qc_finish(const block_t &blk) {
         qc_waiting_lock.unlock();
         // it->second.resolve();
         callback.resolve();
-        if(id==1)
-        printf("TMP: on_qc_finish finds blk=%u : %.10s\n", blk->get_height(),
-               get_hex10(blk->get_hash()).c_str());
+        // if(id==1)
+        // printf("TMP: on_qc_finish finds blk=%u : %.10s\n", blk->get_height(),
+        //        get_hex10(blk->get_hash()).c_str());
     } else {
         // Sometimes, the decoded Proposal at other replicas can be DIFFERENT
         // from the one sent by the proposer.........
         it = qc_waiting.find(wrong_hash_fallback[blk->get_height()]);
         if (it != qc_waiting.end()) {
-            if(id==1)
-                printf("TMP: on_qc_finish cannot find blk=%u : %.10s, replace=%.10s\n", blk->get_height(),
-                       get_hex10(blk->get_hash()).c_str(),
-                       get_hex10(it->first->get_hash()).c_str());
+            // if(id==1)
+            //     printf("TMP: on_qc_finish cannot find blk=%u : %.10s, replace=%.10s\n", blk->get_height(),
+            //            get_hex10(blk->get_hash()).c_str(),
+            //            get_hex10(it->first->get_hash()).c_str());
             promise_t callback = it->second;
             qc_waiting.erase(it);
             qc_waiting_lock.unlock();

@@ -269,7 +269,6 @@ class PMRoundRobinProposer: virtual public PaceMaker {
             auto pm = pending_beats.front();
             pending_beats.pop();
             // pm_qc_finish.reject();
-            printf("async_qc_finish proposer_schedule_next\n");
             (pm_qc_finish = hsc->async_qc_finish(last_proposed))
                 .then([this, pm]() {
                     HOTSTUFF_LOG_PROTO("got QC, propose a new block");

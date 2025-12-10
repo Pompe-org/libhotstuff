@@ -111,8 +111,6 @@ void MsgConsensusRespCmd::postponed_parse() {
 
 // TODO: improve this function
 void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
-    if (get_id() == 1)
-        printf("TMP server1 receives cmd_hash=%.10s\n", get_hex10(cmd_hash).c_str());
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
 }
 
@@ -278,17 +276,16 @@ void HotStuffBase::propose_handler(MsgPropose &&msg, const Net::conn_t &conn) {
     DataStream tmp_s;
     tmp_s << *blk;
 
-    printf("server%u parsed height=%u, hash=%s \
-            parent_hashes=%.10s, cmd=%.10s,\
-           rehash.size=%u, qc.obj_hash=%.10s\n",
-           get_id(),
-           blk->get_height(),
-           get_hex10(blk->get_hash()).c_str(),
-           get_hex10(blk->get_parent_hashes()[0]).c_str(),
-           get_hex10(blk->get_cmds()[0]).c_str(),
-           tmp_s.size(),
-            blk->get_qc()==nullptr? "NULL" : get_hex10(blk->get_qc()->get_obj_hash()).c_str());
-//            get_hex10(tmp_s.get_hash()).c_str());
+    // printf("server%u parsed height=%u, hash=%s \
+    //         parent_hashes=%.10s, cmd=%.10s,\
+    //        rehash.size=%u, qc.obj_hash=%.10s\n",
+    //        get_id(),
+    //        blk->get_height(),
+    //        get_hex10(blk->get_hash()).c_str(),
+    //        get_hex10(blk->get_parent_hashes()[0]).c_str(),
+    //        get_hex10(blk->get_cmds()[0]).c_str(),
+    //        tmp_s.size(),
+    //         blk->get_qc()==nullptr? "NULL" : get_hex10(blk->get_qc()->get_obj_hash()).c_str());
     if (!blk) return;
     promise::all(std::vector<promise_t>{
         async_deliver_blk(blk->get_hash(), peer)
@@ -515,11 +512,11 @@ void HotStuffBase::server_consensus_reponse_cmd_handler(MsgConsensusRespCmd &&ms
 
 
 void HotStuffBase::do_broadcast_proposal(const Proposal &prop) {
-    printf("do_broadcast_proposal proposer=%u, height=%u, hash=%s rehash=%s\n",
-           prop.proposer,
-           prop.blk->get_height(),
-           get_hex10(prop.blk->get_hash()).c_str(),
-           get_hex10(salticidae::get_hash(*prop.blk)).c_str() );
+    // printf("do_broadcast_proposal proposer=%u, height=%u, hash=%s rehash=%s\n",
+    //        prop.proposer,
+    //        prop.blk->get_height(),
+    //        get_hex10(prop.blk->get_hash()).c_str(),
+    //        get_hex10(salticidae::get_hash(*prop.blk)).c_str() );
     pn.multicast_msg(MsgPropose(prop), peers);
 }
 
@@ -634,7 +631,7 @@ void HotStuffBase::start(
                  uint32_t start = stable_point_idx;
                  uint64_t end = next_stable_point_idx;
                  // stable_point = commit_set[stable_point].first.second;
-                 printf("TMP server%u tries to finalize [%d, %d)\n", get_id(), stable_point_idx, next_stable_point_idx);
+                 // printf("[DEBUG] server%u tries to finalize [%d, %d)\n", get_id(), stable_point_idx, next_stable_point_idx);
                  stable_point_idx = next_stable_point_idx;
 
                  // a dummy implementation that only checks the time interval of the batch and the number of commands in the batch
