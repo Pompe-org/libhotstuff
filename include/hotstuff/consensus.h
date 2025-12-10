@@ -26,6 +26,7 @@
 #include "hotstuff/type.h"
 #include "hotstuff/entity.h"
 #include "hotstuff/crypto.h"
+#include <mutex>
 
 namespace hotstuff {
 
@@ -47,6 +48,8 @@ class HotStuffCore {
     std::set<block_t> tails;   /**< set of tail blocks */
     ReplicaConfig config;                   /**< replica configuration */
     /* === async event queues === */
+
+    std::mutex qc_waiting_lock;
     std::unordered_map<block_t, promise_t> qc_waiting;
     promise_t propose_waiting;
     promise_t receive_proposal_waiting;

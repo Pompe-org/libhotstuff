@@ -111,6 +111,8 @@ void MsgConsensusRespCmd::postponed_parse() {
 
 // TODO: improve this function
 void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
+    if (get_id() == 1)
+        printf("TMP server1 receives cmd_hash=%.10s\n", get_hex10(cmd_hash).c_str());
     cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
 }
 
@@ -504,14 +506,14 @@ void HotStuffBase::do_broadcast_proposal(const Proposal &prop) {
 
 void HotStuffBase::do_vote(ReplicaID last_proposer, const Vote &vote) {
     pmaker->beat_resp(last_proposer)
-            .then([this, vote](ReplicaID proposer) {
+            .then([this, vote, last_proposer](ReplicaID proposer) {
         if (proposer == get_id())
         {
-            throw HotStuffError("unreachable line");
-            //on_receive_vote(vote);
+            // throw HotStuffError("unreachable line");
+            on_receive_vote(vote);
         }
-        else
-            pn.send_msg(MsgVote(vote), get_config().get_peer_id(proposer));
+        // else
+            pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
     });
 }
 
@@ -612,6 +614,7 @@ void HotStuffBase::start(
                  uint32_t start = stable_point_idx;
                  uint64_t end = next_stable_point_idx;
                  // stable_point = commit_set[stable_point].first.second;
+                 printf("TMP server%u tries to finalize [%d, %d)\n", get_id(), stable_point_idx, next_stable_point_idx);
                  stable_point_idx = next_stable_point_idx;
 
                  // a dummy implementation that only checks the time interval of the batch and the number of commands in the batch
@@ -638,7 +641,7 @@ void HotStuffBase::start(
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                     //printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
+                     printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
 
                      for (uint32_t i = start; i < end; i++) {
                          e.second(commit_set[i].first.first, commit_set[i].second);
@@ -694,7 +697,7 @@ void HotStuffBase::start(
                 it = decision_waiting.insert(std::make_pair(cmd_hash, e.second)).first;
             else
                 e.second(Finality(id, 0, 0, 0, cmd_hash, uint256_t()));
-            if (proposer != get_id()) continue;
+            if (1 != get_id()) continue;
             cmd_pending_buffer.push(cmd_hash);
             if (cmd_pending_buffer.size() >= blk_size)
             {
@@ -706,8 +709,10 @@ void HotStuffBase::start(
                 }
 
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
-                    if (proposer == get_id())
+                    if (1 == get_id())
                         on_propose(cmds, pmaker->get_parents());
+                    else
+                        printf("ERROR! proposer=%u, get_id()=%u\n", proposer, get_id());
                 });
 
                 return true;

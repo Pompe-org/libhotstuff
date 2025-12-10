@@ -144,7 +144,7 @@ class PMWaitQC: public virtual PaceMaker {
         {
             auto pm = pending_beats.front();
             pending_beats.pop();
-            pm_qc_finish.reject();
+            // pm_qc_finish.reject();
             (pm_qc_finish = hsc->async_qc_finish(last_proposed))
                 .then([this, pm]() {
                     pm.resolve(get_proposer());
@@ -268,7 +268,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
         {
             auto pm = pending_beats.front();
             pending_beats.pop();
-            pm_qc_finish.reject();
+            // pm_qc_finish.reject();
             (pm_qc_finish = hsc->async_qc_finish(last_proposed))
                 .then([this, pm]() {
                     HOTSTUFF_LOG_PROTO("got QC, propose a new block");
@@ -320,7 +320,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
         rotating = true;
         proposer = (proposer + 1) % hsc->get_config().nreplicas;
         HOTSTUFF_LOG_PROTO("Pacemaker: rotate to %d", proposer);
-        pm_qc_finish.reject();
+        // pm_qc_finish.reject();
         pm_wait_propose.reject();
         pm_qc_manual.reject();
         // start timer
@@ -332,7 +332,7 @@ class PMRoundRobinProposer: virtual public PaceMaker {
     void stop_rotate() {
         timer.del();
         HOTSTUFF_LOG_PROTO("Pacemaker: stop rotation at %d", proposer);
-        pm_qc_finish.reject();
+        // pm_qc_finish.reject();
         pm_wait_propose.reject();
         pm_qc_manual.reject();
         rotating = false;
@@ -388,17 +388,17 @@ class PMRoundRobinProposer: virtual public PaceMaker {
     }
 
     promise_t beat() override {
-        if (!rotating && proposer == hsc->get_id())
-        {
+        // if (!rotating && proposer == hsc->get_id())
+        // {
             promise_t pm;
             pending_beats.push(pm);
             proposer_schedule_next();
             return pm;
-        }
-        else
-            return promise_t([proposer=proposer](promise_t &pm) {
-                pm.resolve(proposer);
-            });
+        // }
+        // else
+        //     return promise_t([proposer=proposer](promise_t &pm) {
+        //         pm.resolve(proposer);
+        //     });
     }
 
     promise_t beat_resp(ReplicaID last_proposer) override {

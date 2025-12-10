@@ -165,6 +165,16 @@ block_t HotStuffCore::on_propose(const std::vector<uint256_t> &cmds,
             hqc.first,
             nullptr
         ));
+    {
+        // std::lock_guard<std::mutex> guard(qc_waiting_lock);
+        auto it = qc_waiting.find(bnew);
+        if (it == qc_waiting.end()) {
+            it = qc_waiting.insert(std::make_pair(bnew, promise_t())).first;
+            // printf("on_propose inserts qc_waiting %.10s\n", get_hex10(bnew->get_hash()).c_str());
+        }
+    }
+    printf("TMP server%u proposes blk.height=%u hash=%.10s\n", id, parents[0]->height + 1,
+           get_hex10(bnew->get_hash()).c_str());
     const uint256_t bnew_hash = bnew->get_hash();
     bnew->self_qc = create_quorum_cert(bnew_hash);
     on_deliver_blk(bnew);
@@ -291,6 +301,7 @@ promise_t HotStuffCore::async_qc_finish(const block_t &blk) {
         return promise_t([](promise_t &pm) {
             pm.resolve();
         });
+
     auto it = qc_waiting.find(blk);
     if (it == qc_waiting.end())
         it = qc_waiting.insert(std::make_pair(blk, promise_t())).first;
@@ -298,11 +309,19 @@ promise_t HotStuffCore::async_qc_finish(const block_t &blk) {
 }
 
 void HotStuffCore::on_qc_finish(const block_t &blk) {
+    // std::lock_guard<std::mutex> guard(qc_waiting_lock);
     auto it = qc_waiting.find(blk);
     if (it != qc_waiting.end())
     {
         it->second.resolve();
         qc_waiting.erase(it);
+        if(id==1)
+        printf("TMP: on_qc_finish finds blk=%u : %.10s\n", blk->get_height(),
+               get_hex10(blk->get_hash()).c_str());
+    } else {
+        if(id==1)
+        printf("TMP: on_qc_finish cannot find blk=%u : %.10s\n", blk->get_height(),
+               get_hex10(blk->get_hash()).c_str());
     }
 }
 
