@@ -160,16 +160,30 @@ class Block {
             cmds(cmds),
             qc(std::move(qc)),
             extra(std::move(extra)),
-            hash(salticidae::get_hash(*this)),
             parents(parents),
             qc_ref(qc_ref),
-            self_qc(std::move(self_qc)),
+            self_qc(self_qc==nullptr? nullptr : std::move(self_qc)),
             height(height),
             delivered(0),
-            decision(decision) {}
+            decision(decision)
+            //hash(salticidae::get_hash(*this))
+        {
+        printf("constructor #1 old_hash=%.10s, new_hash=%.10s\n",
+               get_hex10(hash).c_str(),
+               get_hex10(salticidae::get_hash(*this)).c_str()
+);
+            DataStream tmp_s;
+            tmp_serialize(tmp_s);
+            hash = tmp_s.get_hash();
+            printf("constructor #2 hash height=%u, hash=%.10s, \
+                   parent_hashes=%.10s, cmd=%.10s,  \
+                   rehash.qc.size=%u, qc.obj_hash=%.10s\n", height, get_hex10(hash).c_str(),
+                   get_hex10(parent_hashes[0]).c_str(), get_hex10(cmds[0]).c_str(),
+               tmp_s.size(),
+                   qc==nullptr? "NULL" : get_hex10(qc->get_obj_hash()).c_str()); }
 
+    void tmp_serialize(DataStream &s) const;
     void serialize(DataStream &s) const;
-
     void unserialize(DataStream &s, HotStuffCore *hsc);
 
     const std::vector<uint256_t> &get_cmds() const {
@@ -220,6 +234,7 @@ struct BlockHeightCmp {
 };
 
 class EntityStorage {
+    std::mutex blk_cache_mutex;
     std::unordered_map<const uint256_t, block_t> blk_cache;
     std::unordered_map<const uint256_t, command_t> cmd_cache;
     public:
@@ -239,12 +254,19 @@ class EntityStorage {
         //    HOTSTUFF_LOG_WARN("invalid %s", std::string(_blk).c_str());
         //    return nullptr;
         //}
+        std::lock_guard<std::mutex> guard(blk_cache_mutex);
         block_t blk = new Block(std::move(_blk));
         return blk_cache.insert(std::make_pair(blk->get_hash(), blk)).first->second;
     }
 
     const block_t &add_blk(const block_t &blk) {
-        return blk_cache.insert(std::make_pair(blk->get_hash(), blk)).first->second;
+        printf("add_blk: height=%u, hash=%.10s, rehash=%.10s\n", blk->get_height(),
+               get_hex10(blk->get_hash()).c_str(),
+               get_hex10(salticidae::get_hash(*blk)).c_str());
+        //return blk_cache.insert(std::make_pair(blk->get_hash(), blk)).first->second;
+        std::lock_guard<std::mutex> guard(blk_cache_mutex);
+        blk_cache.insert(std::make_pair(blk->get_hash(), blk));
+        return blk;
     }
 
     block_t find_blk(const uint256_t &blk_hash) {

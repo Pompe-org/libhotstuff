@@ -19,6 +19,15 @@
 
 namespace hotstuff {
 
+void Block::tmp_serialize(DataStream &s) const {
+    s << htole((uint32_t)parent_hashes.size());
+    for (const auto &hash: parent_hashes)
+        s << hash;
+    s << htole((uint32_t)cmds.size());
+    for (auto cmd: cmds)
+        s << cmd;
+}
+
 void Block::serialize(DataStream &s) const {
     s << htole((uint32_t)parent_hashes.size());
     for (const auto &hash: parent_hashes)
@@ -53,7 +62,12 @@ void Block::unserialize(DataStream &s, HotStuffCore *hsc) {
         auto base = s.get_data_inplace(n);
         extra = bytearray_t(base, base + n);
     }
-    this->hash = salticidae::get_hash(*this);
+    self_qc=nullptr;
+
+    DataStream tmp_s;
+    tmp_serialize(tmp_s);
+    this->hash = tmp_s.get_hash();
+    //this->hash = salticidae::get_hash(*this);
 }
 
 bool Block::verify(const HotStuffCore *hsc) const {

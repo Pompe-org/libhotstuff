@@ -51,6 +51,8 @@ class HotStuffCore {
 
     std::mutex qc_waiting_lock;
     std::unordered_map<block_t, promise_t> qc_waiting;
+    std::unordered_map<uint32_t, block_t> wrong_hash_fallback;
+
     promise_t propose_waiting;
     promise_t receive_proposal_waiting;
     promise_t hqc_update_waiting;

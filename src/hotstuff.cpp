@@ -275,6 +275,20 @@ void HotStuffBase::propose_handler(MsgPropose &&msg, const Net::conn_t &conn) {
     auto &prop = msg.proposal;
     block_t blk = prop.blk;
 
+    DataStream tmp_s;
+    tmp_s << *blk;
+
+    printf("server%u parsed height=%u, hash=%s \
+            parent_hashes=%.10s, cmd=%.10s,\
+           rehash.size=%u, qc.obj_hash=%.10s\n",
+           get_id(),
+           blk->get_height(),
+           get_hex10(blk->get_hash()).c_str(),
+           get_hex10(blk->get_parent_hashes()[0]).c_str(),
+           get_hex10(blk->get_cmds()[0]).c_str(),
+           tmp_s.size(),
+            blk->get_qc()==nullptr? "NULL" : get_hex10(blk->get_qc()->get_obj_hash()).c_str());
+//            get_hex10(tmp_s.get_hash()).c_str());
     if (!blk) return;
     promise::all(std::vector<promise_t>{
         async_deliver_blk(blk->get_hash(), peer)
@@ -501,20 +515,26 @@ void HotStuffBase::server_consensus_reponse_cmd_handler(MsgConsensusRespCmd &&ms
 
 
 void HotStuffBase::do_broadcast_proposal(const Proposal &prop) {
+    printf("do_broadcast_proposal proposer=%u, height=%u, hash=%s rehash=%s\n",
+           prop.proposer,
+           prop.blk->get_height(),
+           get_hex10(prop.blk->get_hash()).c_str(),
+           get_hex10(salticidae::get_hash(*prop.blk)).c_str() );
     pn.multicast_msg(MsgPropose(prop), peers);
 }
 
 void HotStuffBase::do_vote(ReplicaID last_proposer, const Vote &vote) {
-    pmaker->beat_resp(last_proposer)
-            .then([this, vote, last_proposer](ReplicaID proposer) {
-        if (proposer == get_id())
-        {
-            // throw HotStuffError("unreachable line");
-            on_receive_vote(vote);
-        }
+    // pmaker->beat_resp(last_proposer)
+    //         .then([this, vote, last_proposer](ReplicaID proposer) {
+    //     if (last_proposer == get_id())
+    //     {
+    //         // throw HotStuffError("unreachable line");
+    //         // on_receive_vote(vote);
+    //     }
         // else
-            pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
-    });
+
+    pn.send_msg(MsgVote(vote), get_config().get_peer_id(last_proposer));
+    // });
 }
 
 void HotStuffBase::do_consensus(const block_t &blk) {
