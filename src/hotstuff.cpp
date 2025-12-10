@@ -658,7 +658,20 @@ void HotStuffBase::start(
                      uint32_t start = exec_client_rsp[commit_set_hash].first;
                      uint32_t end = exec_client_rsp[commit_set_hash].second;
 
-                     printf("[DEBUG] consensus %d finalized -> [%d, %d)\n", fin.cmd_height, start, end);
+                     static struct timeval last_tv;
+                     uint64_t last_time = last_tv.tv_sec;
+                     last_time *= 1000 * 1000;
+                     last_time += last_tv.tv_usec;
+
+                     struct timeval tv;
+                     gettimeofday(&tv, nullptr);
+                     uint64_t curr_time = tv.tv_sec;
+                     curr_time *= 1000 * 1000;
+                     curr_time += tv.tv_usec;
+                     printf("[DEBUG] consensus %d finalized -> [%d, %d) curr_time=%llu, elapsed=%llums\n",
+                            fin.cmd_height, start, end, curr_time,
+                            (curr_time - last_time) / 1000);
+                     last_tv = tv;
 
                      for (uint32_t i = start; i < end; i++) {
                          e.second(commit_set[i].first.first, commit_set[i].second);
