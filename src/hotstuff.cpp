@@ -81,35 +81,44 @@ void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
     assert(false); // use exec_command_pos
 }
 
-// TODO: improve this function
+// Add cmd_hash to cmd_pending based on stake weight
+#define NCLIENT 2
+const uint256_t null_hash;
+const int STAKE_WEIGHT[] = {3, 11, 3, 4, 15, 6, 6, 11, 4, 3, 3, 11};
+const int SCHEDULE[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11};
 void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback) {
-    // TODO: Improve the leader schedule code below
-    //       The current version does NOT consider stake weight
-    #define NCLIENTS 2
-    #define NSERVERS 12
-    #define NSLOTS_PER_LEADER 10
-    #define NCMDS_PER_CLIENT (NSLOTS_PER_LEADER / NCLIENTS)
-
     std::lock_guard<std::mutex> lock(leader_schedule_mutex);
     if (leader_schedule.find(cmd_hash) == leader_schedule.end()) {
-        leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+        for (int weight=0, i = 0; i < 12; i++) {
+            weight += STAKE_WEIGHT[i];
+            if (weight > (cmd_idx % 80)) {
+                leader_schedule[cmd_hash] = i;
+                break;
+            }
+        }
     } else {
-        printf("WRONG! server#u changes leader of %.10s from %u to %u\n",
-               get_id(), get_hex10(cmd_hash).c_str(), leader_schedule[cmd_hash], (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS);
-        // leader_schedule[cmd_hash] = (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS;
+        printf("WRONG! server#u changes leader of %.10s from %u\n",
+               get_id(), get_hex10(cmd_hash).c_str(), leader_schedule[cmd_hash]);
     }
-    if ( get_id() == (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS ) {
+    if ( get_id() == leader_schedule[cmd_hash] ) {
         cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
         cmd_pending_enq_cnt++;
+    } else {
+        #define NCLIENT 2
+        uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
+        int slot_leader = SCHEDULE[(slot / NCLIENT) % 80];
+        int prev_slot_leader = SCHEDULE[((slot-1) / NCLIENT) % 80];
+        if ( slot_leader == get_id() && prev_slot_leader != get_id() ) {
+            // It is my turn to become the leader, and I may need to enqueue a null_hash
+            // into cmd_pending to trigger the code logic in cmd_pending.reg_handler(..)
+            cmd_pending.enqueue(std::make_pair(null_hash, callback));
+        }
     }
 
     // const auto &cmd_hash = e.first;
     auto it = decision_waiting.find(cmd_hash);
     if (it == decision_waiting.end())
         it = decision_waiting.insert(std::make_pair(cmd_hash, callback)).first;
-    // if( get_id() ==  (cmd_idx / NCMDS_PER_CLIENT) % NSERVERS )
-    //     printf("id=%u exec_command_pos inserts cmd=%.10s, enq_cnt=%u, deq_cnt=%u\n", get_id(),
-    //            get_hex10(cmd_hash).c_str(), cmd_pending_enq_cnt, cmd_pending_deq_cnt);
 }
 
 void HotStuffBase::on_fetch_blk(const block_t &blk) {
@@ -473,7 +482,7 @@ void HotStuffBase::start(
 
     cmd_pending.reg_handler(ec, [this](cmd_queue_t &q) {
         uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
-        ReplicaID proposer = (slot / 10) % 12;
+        ReplicaID proposer = SCHEDULE[(slot / NCLIENT) % 80];
         //ReplicaID proposer = pmaker->get_proposer();
         if (proposer != get_id()) {
             return false;
@@ -486,6 +495,10 @@ void HotStuffBase::start(
             std::lock_guard<std::mutex> lock(leader_schedule_mutex);
             // printf("server %u pushes cmd_hash=%.10s\n", get_id(), get_hex10(cmd_hash).c_str());
             const auto &cmd_hash = e.first;
+            if (uint256_is_eq(&cmd_hash, &null_hash)) {
+                // null_hash is for notification purpose -- see exec_command_pos()
+                continue;
+            }
             cmd_pending_buffer.push(cmd_hash);
             if (cmd_pending_buffer.size() >= blk_size)
             {
@@ -497,11 +510,11 @@ void HotStuffBase::start(
                 }
                 // printf("server #%u calls pmaker->beat() when slot=%u, cmd_hash=%.10s, pending=%u-%u\n", get_id(), slot,
                 //         get_hex10(cmd_hash).c_str(), cmd_pending_enq_cnt, cmd_pending_deq_cnt);
-                pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
+                pmaker->beat().then([this, cmds = std::move(cmds), SCHEDULE](ReplicaID proposer) {
                     //if (proposer == get_id()) {
                     uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
-                    if( (slot / 10) % 12 == get_id() ) { /* rotate based on id */
-                        // printf("server #%u proposing for slot#%u\n", get_id(), slot);
+                    if( SCHEDULE[(slot / NCLIENT) % 80] == get_id() ) { /* rotate based on id */
+                        printf("server #%u proposing for slot#%u\n", get_id(), slot);
                         on_propose(cmds, pmaker->get_parents());
                     } else {
                         // This means that I, as the current leader, has finished the last slot
