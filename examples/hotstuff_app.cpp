@@ -143,6 +143,9 @@ std::pair<std::string, std::string> split_ip_port_cport(const std::string &s) {
 }
 
 salticidae::BoxObj<HotStuffApp> papp = nullptr;
+#include<map>
+int ordering_counter;
+std::map<uint32_t, std::pair<int, int>> ordering_result;
 
 int main(int argc, char **argv) {
     Config config(argv[1]);
@@ -292,6 +295,20 @@ int main(int argc, char **argv) {
 
     papp->start(reps);
     elapsed.stop(true);
+
+    int client0_win = 0, client1_win = 0, skip = 0;
+    for (const auto& [idx, ordering] : ordering_result) {
+        if (ordering.first == -1 || ordering.second == -1) {
+            skip++;
+            continue;
+        }
+        if (ordering.first < ordering.second)
+            client0_win++;
+        else
+            client1_win++;
+    }
+    fprintf(stderr, "Server#%u: client0=%d, client1=%d, skip=%d\n", idx, client0_win, client1_win, skip);
+
     return 0;
 }
 
@@ -336,6 +353,7 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
     cn.listen(clisten_addr);
 }
 
+
 void HotStuffApp::client_request_cmd_handler(MsgReqCmd &&msg, const conn_t &conn) {
     const NetAddr addr = conn->get_addr();
     uint32_t cid, n;
@@ -343,9 +361,19 @@ void HotStuffApp::client_request_cmd_handler(MsgReqCmd &&msg, const conn_t &conn
     const auto &cmd_hash = cmd->get_hash();
     HOTSTUFF_LOG_DEBUG("processing %s", std::string(*cmd).c_str());
     //if( get_id()==1 ) printf("Received cmd cid=%lu, n=%lu\n", cid, n);
-    exec_command_pos(cmd_hash, n, [this, addr](Finality fin) {
+    int I_am_leader = exec_command_pos(cmd_hash, n, [this, addr](Finality fin) {
         resp_queue.enqueue(std::make_pair(fin, addr));
     });
+
+    if (I_am_leader) {
+        if (ordering_result.find(n) == ordering_result.end())
+            ordering_result[n] = std::make_pair(-1, -1);
+        ordering_counter++;
+        if (cid == 0)
+            ordering_result[n].first = ordering_counter;
+        else
+            ordering_result[n].second = ordering_counter;
+    }
 }
 
 void HotStuffApp::start(const std::vector<std::tuple<NetAddr, bytearray_t, bytearray_t>> &reps) {

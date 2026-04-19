@@ -36,6 +36,7 @@ using hotstuff::NetAddr;
 using hotstuff::EventContext;
 using hotstuff::MsgReqCmd;
 using hotstuff::MsgRespCmd;
+using hotstuff::MsgReadyCmd;
 using hotstuff::CommandDummy;
 using hotstuff::HotStuffError;
 using hotstuff::uint256_t;
@@ -66,14 +67,33 @@ std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed;
 Net mn(ec, Net::Config());
 
+volatile int ready, curr_idx=-1;
+Net::conn_t controller;
 void connect_all() {
     for (size_t i = 0; i < replicas.size(); i++)
         conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
+
+    controller = mn.connect_sync(NetAddr("control", 30000));
+
+    //controller->write(std::move(hello_msg));
+    // MsgReadyCmd msg(0xA);
+    // mn.send_msg(msg, controller);
+    //printf("Client#%u sent hello msg\n", cid);
 }
 
 bool try_send(bool check = true) {
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
+        if (curr_idx != cnt) {
+            ready = 0;
+            curr_idx = cnt;
+            std::string s = "client#" + std::to_string(cid) + ", cmd_idx=" + std::to_string(cnt);
+            std::vector<uint8_t> hello_msg(s.begin(), s.end());
+            controller->write(std::move(hello_msg));
+            return false;
+        }
+        if (curr_idx == cnt && !ready) return false;
+
         auto cmd = new CommandDummy(cid, cnt++);
         MsgReqCmd msg(*cmd);
         for (auto &p: conns) mn.send_msg(msg, p.second);
@@ -88,6 +108,12 @@ bool try_send(bool check = true) {
         return true;
     }
     return false;
+}
+
+void client_ready_cmd_handler(MsgReadyCmd &&msg, const Net::conn_t &) {
+    //printf("Client#%u gets ready command with reply=%u\n", cid, msg.magic);
+    ready = 1;
+    while (try_send());
 }
 
 void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
@@ -134,6 +160,7 @@ int main(int argc, char **argv) {
     ev_sigterm.add(SIGTERM);
 
     mn.reg_handler(client_resp_cmd_handler);
+    mn.reg_handler(client_ready_cmd_handler);
     mn.start();
 
     config.add_opt("idx", opt_idx, Config::SET_VAL);

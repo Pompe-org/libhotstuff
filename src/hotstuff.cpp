@@ -86,7 +86,7 @@ void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
 const uint256_t null_hash;
 const int STAKE_WEIGHT[] = {3, 11, 3, 4, 15, 6, 6, 11, 4, 3, 3, 11};
 const int SCHEDULE[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11};
-void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback) {
+int HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback) {
     std::lock_guard<std::mutex> lock(leader_schedule_mutex);
     if (leader_schedule.find(cmd_hash) == leader_schedule.end()) {
         for (int weight=0, i = 0; i < 12; i++) {
@@ -100,9 +100,12 @@ void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit
         printf("WRONG! server#u changes leader of %.10s from %u\n",
                get_id(), get_hex10(cmd_hash).c_str(), leader_schedule[cmd_hash]);
     }
+
+    int I_am_leader = 0;
     if ( get_id() == leader_schedule[cmd_hash] ) {
         cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
         cmd_pending_enq_cnt++;
+        I_am_leader = 1;
     } else {
         #define NCLIENT 2
         uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
@@ -119,6 +122,8 @@ void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit
     auto it = decision_waiting.find(cmd_hash);
     if (it == decision_waiting.end())
         it = decision_waiting.insert(std::make_pair(cmd_hash, callback)).first;
+
+    return I_am_leader;
 }
 
 void HotStuffBase::on_fetch_blk(const block_t &blk) {
@@ -514,7 +519,7 @@ void HotStuffBase::start(
                     //if (proposer == get_id()) {
                     uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
                     if( SCHEDULE[(slot / NCLIENT) % 80] == get_id() ) { /* rotate based on id */
-                        printf("server #%u proposing for slot#%u\n", get_id(), slot);
+                        //printf("server #%u proposing for slot#%u\n", get_id(), slot);
                         on_propose(cmds, pmaker->get_parents());
                     } else {
                         // This means that I, as the current leader, has finished the last slot

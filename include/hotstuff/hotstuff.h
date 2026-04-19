@@ -224,7 +224,7 @@ class HotStuffBase: public HotStuffCore {
 
     /* Submit the command to be decided. */
     void exec_command(uint256_t cmd_hash, commit_cb_t callback);
-    void exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback);
+    int exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit_cb_t callback);
     void start(std::vector<std::tuple<NetAddr, pubkey_bt, uint256_t>> &&replicas,
                 bool ec_loop = false);
 
