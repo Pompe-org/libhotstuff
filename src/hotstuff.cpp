@@ -20,6 +20,7 @@
 #include "hotstuff/liveness.h"
 
 #include <sys/time.h>
+#include <unordered_set>
 
 using salticidae::static_pointer_cast;
 
@@ -654,27 +655,58 @@ void HotStuffBase::start(
                  //printf("[DEBUG] consensus %d start\n", debug_invoked);
                  debug_invoked += 4;
 
-                 exec_command(commit_set_hash, [this, e, commit_set_hash](Finality fin) {
-                     uint32_t start = exec_client_rsp[commit_set_hash].first;
-                     uint32_t end = exec_client_rsp[commit_set_hash].second;
-
-                     static struct timeval last_tv;
-                     uint64_t last_time = last_tv.tv_sec;
-                     last_time *= 1000 * 1000;
-                     last_time += last_tv.tv_usec;
-
+                 uint32_t cmd_cnt_cap = cmd_cnt;
+                 exec_command(commit_set_hash, [this, e, cmd_cnt_cap, batch_end_timestamp](Finality fin) {
+                     /* Get latency statistics. */
                      struct timeval tv;
                      gettimeofday(&tv, nullptr);
                      uint64_t curr_time = tv.tv_sec;
                      curr_time *= 1000 * 1000;
                      curr_time += tv.tv_usec;
-                     printf("[DEBUG] consensus %d finalized -> [%d, %d) curr_time=%llu, elapsed=%llums\n",
-                            fin.cmd_height, start, end, curr_time,
-                            (curr_time - last_time) / 1000);
-                     last_tv = tv;
 
+                     /* Get and print the current/previous batch indexes. */
+                     auto commit_set_hash = CommandDummy(104, cmd_cnt_cap).get_hash();
+                     uint32_t start = exec_client_rsp[commit_set_hash].first;
+                     uint32_t end = exec_client_rsp[commit_set_hash].second;
+                     uint32_t prev_start = 0, prev_end = 0;
+                     if (cmd_cnt_cap > 1) {
+                         auto prev_commit_set_hash = CommandDummy(104, cmd_cnt_cap - 1).get_hash();
+                         prev_start = exec_client_rsp[prev_commit_set_hash].first;
+                         prev_end = exec_client_rsp[prev_commit_set_hash].second;
+                     }
+                     printf("[DEBUG] consensus %d:[%d, %d) finalized, prev=[%d,%d)  batch_end_time=%llu, consensus_done_time=%llu\n",
+                            fin.cmd_height, start, end,
+                            prev_start, prev_end,
+                            batch_end_timestamp, curr_time);
+
+                     /* Get a random seed from SRO. */
+                     /* CloudLab d430/d710 do not support SGX. Sleep instead. */
+                     usleep(10);
+                     uint32_t seed = cmd_cnt_cap;
+                     std::srand(seed);
+
+                     /* Notify everything in the previous batch because batch size is
+                      * 2000ms, and the maximum degree of random noise is also 2000ms. */
+                     #define MAX_NOISE_MS 2000
+                     static std::unordered_set<uint256_t> notified;
+                     for (uint32_t i = prev_start; i < prev_end; i++) {
+                         uint256_t &hash = commit_set[i].first.first;
+                         if (!notified.count(hash)){
+                             notified.insert(hash);
+                             e.second(hash, commit_set[i].second);
+                         }
+                     }
+
+                     /* Generate random numbers for the current batch, and notify
+                      * those with (median_timestamp+noise)<batch_end_timstamp now. */
                      for (uint32_t i = start; i < end; i++) {
-                         e.second(commit_set[i].first.first, commit_set[i].second);
+                         uint256_t &hash = commit_set[i].first.first;
+                         uint32_t noise = (rand() % MAX_NOISE_MS) * 1000;
+                         hash_to_noise[hash] = noise;
+                         if ( commit_set[i].first.second+noise < batch_end_timestamp ) {
+                             notified.insert(hash);
+                             e.second(hash, commit_set[i].second);
+                         }
                      }
 
                      if (exec_count < end)

@@ -189,6 +189,7 @@ class HotStuffBase: public HotStuffCore {
     uint32_t stable_period;
     uint32_t liveness_delta;
     uint32_t exec_count, exec_sent;
+    std::unordered_map<uint256_t, uint32_t> hash_to_noise;
     std::unordered_map<uint256_t,std::pair<uint32_t, uint32_t>> exec_client_rsp;
 
     std::mutex commit_set_mutex;

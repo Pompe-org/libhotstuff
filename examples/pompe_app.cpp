@@ -336,6 +336,11 @@ int main(int argc, char **argv) {
         .max_msg_queue_size(6553600)
         .burst_size(opt_cliburst->get())
         .nworker(opt_clinworker->get());
+
+    if (opt_stable_period->get() != 2000) {
+        fprintf(stderr, "Pompe-SRO only supports stable-period=2s for now.\n");
+        return 0;
+    }
     papp = new HotStuffApp(//opt_blk_size->get(),
                            // the batch logic of archipelago is in function client_ordering1_request_cmd_handler in this file
                            1,
@@ -462,7 +467,8 @@ HotStuffApp::HotStuffApp(uint32_t blk_size,
                 {
                     try {
                         debug_server_exec_resp++;
-                        cn.send_msg(MsgConsensusRespClientCmd(p.first), p.second);
+                        uint32_t noise = hash_to_noise[p.first];
+                        cn.send_msg(MsgConsensusRespClientCmd(p.first, noise), p.second);
                     } catch (std::exception &err) {
                         //HOTSTUFF_LOG_WARN("unable to send MsgConsensusRespClientCmd to the client: %s", err.what());
                     }

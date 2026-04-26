@@ -109,13 +109,14 @@ struct MsgConsensusRespClientCmd {
     static const opcode_t opcode = 0xd;
     DataStream serialized;
     uint256_t cmd_hash;
+    uint32_t noise;
     SigSecp256k1 sig;
 
-    MsgConsensusRespClientCmd(const uint256_t &cmd_hash) {
-        serialized << cmd_hash <<  sig;
+    MsgConsensusRespClientCmd(const uint256_t &cmd_hash, const uint32_t noise) {
+        serialized << cmd_hash << noise << sig;
     }
     MsgConsensusRespClientCmd(DataStream &&s) {
-        s >> cmd_hash >> sig;
+        s >> cmd_hash >> noise >> sig;
     }
 };
 

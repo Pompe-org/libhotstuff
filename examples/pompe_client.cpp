@@ -16,6 +16,7 @@
  */
 
 #include <cassert>
+#include <map>
 #include <random>
 #include <signal.h>
 #include <sys/time.h>
@@ -57,6 +58,7 @@ uint32_t nfaulty;
 
 struct Request {
     command_t cmd;
+    uint32_t idx;
     size_t confirmed;
     size_t ordering_rtt1;
     size_t ordering_rtt2;
@@ -66,7 +68,7 @@ struct Request {
     //    std::vector<std::string> timestamps;
     uint64_t sent_time;
     std::vector<uint64_t> timestamps;
-    Request(const command_t &cmd): cmd(cmd), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) {
+    Request(const command_t &cmd, uint32_t idx): cmd(cmd), idx(idx), confirmed(0), ordering_rtt1(0), ordering_rtt2(0), ordering_rtt3(0) {
         struct timeval tv;
         gettimeofday(&tv, nullptr);
         sent_time = tv.tv_sec;
@@ -87,7 +89,16 @@ std::unordered_map<ReplicaID, Net::conn_t> conns;
 std::unordered_map<const uint256_t, Request> waiting, waiting_exec;
 std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed, elapsed_exec;
-std::vector<std::pair<uint64_t, uint64_t>> median_timestamps;
+
+struct Result {
+    uint64_t sent;
+    uint64_t median;
+    uint32_t noise;
+    Result(){}
+    Result(uint64_t sent_, uint64_t median_):
+        sent(sent_), median(median_), noise(0) {}
+};
+std::map<uint32_t, Result> median_timestamps;
 Net mn(ec, Net::Config());
 
 void connect_all() {
@@ -122,7 +133,7 @@ bool try_send(bool check = true) {
                             get_hex(cmd->get_hash()).c_str());
 #endif
         waiting.insert(std::make_pair(
-            cmd->get_hash(), Request(cmd)));
+            cmd->get_hash(), Request(cmd, cnt-1)));
         if (max_iter_num > 0)
             max_iter_num--;
         return true;
@@ -190,7 +201,7 @@ void client_ordering1_resp_cmd_handler(MsgOrdering1RespCmd &&msg, const Net::con
     std::sort(it->second.timestamps.begin(), it->second.timestamps.end());
     //uint64_t median = it->second.timestamps[nfaulty + 1];
     uint64_t median = it->second.timestamps[ MEDIAN_IDX ];
-    median_timestamps.push_back(std::make_pair(it->second.sent_time, median));
+    median_timestamps[it->second.idx] = Result(it->second.sent_time, median);
     
     // send the second rtt message of ordering phase
     // printf("here1\n");
@@ -238,6 +249,7 @@ void client_ordering_exec_resp_handler(MsgConsensusRespClientCmd &&msg, const Ne
     auto it = waiting_exec.find(cmd_hash);
     if (it == waiting_exec.end()) return;
     auto &et_exec = it->second.et_exec;
+    median_timestamps[it->second.idx].noise = msg.noise;
 
     if (++it->second.ordering_rtt3 != 1) return; // wait for 1 exec ack
     count_exec++;
@@ -348,7 +360,7 @@ int main(int argc, char **argv) {
       ordering_latencies.push_back(e.second);
     }
     std::sort(ordering_latencies.begin(), ordering_latencies.end());
-    printf("[DEBUG] client%d ordering latency: median = %.6f sec, 90% = %.6f sec\n", cid, ordering_latencies[elapsed.size() * 0.5], ordering_latencies[elapsed.size() * 0.9]);
+    printf("[DEBUG] client%d ordering latency: median = %.6f sec, 90% = %.6f sec, 99% = %.6f sec\n", cid, ordering_latencies[elapsed.size() * 0.5], ordering_latencies[elapsed.size() * 0.9], ordering_latencies[elapsed.size() * 0.99]);
 
     std::vector<double> consensus_latencies;
     for (const auto &e: elapsed_exec)
@@ -356,7 +368,7 @@ int main(int argc, char **argv) {
       consensus_latencies.push_back(e.second);
     }
     std::sort(consensus_latencies.begin(), consensus_latencies.end());
-    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec\n", cid, consensus_latencies[elapsed_exec.size() * 0.5], consensus_latencies[elapsed_exec.size() * 0.9]);
+    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec, 99% = %.6f sec\n", cid, consensus_latencies[elapsed_exec.size() * 0.5], consensus_latencies[elapsed_exec.size() * 0.9], consensus_latencies[elapsed_exec.size() * 0.99]);
 
     /* Produce the log file */
     
@@ -383,9 +395,10 @@ int main(int argc, char **argv) {
     // }
 
     // Median timestamps
-    for (const auto &e: median_timestamps)
+    for (const auto& [idx, e]: median_timestamps)
     {
-        fprintf(stdout, "%lld %lld delta=%lld\n", e.first, e.second, e.second-e.first);
+        fprintf(stdout, "idx=%lld, median=%lld, noise=%u, delta=%lld\n",
+                idx, e.median, e.noise, e.median-e.sent);
     }
 
     fclose(stdout);
