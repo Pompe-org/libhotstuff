@@ -36,6 +36,7 @@ using hotstuff::ReplicaID;
 using hotstuff::NetAddr;
 using hotstuff::EventContext;
 //using hotstuff::MsgReqCmd;
+using hotstuff::MsgReadyCmd;
 using hotstuff::MsgOrdering1ReqCmd;
 using hotstuff::MsgOrdering2ReqCmd;
 using hotstuff::MsgRespCmd;
@@ -101,9 +102,12 @@ struct Result {
 std::map<uint32_t, Result> median_timestamps;
 Net mn(ec, Net::Config());
 
+volatile int ready, curr_idx=-1;
+Net::conn_t controller;
 void connect_all() {
     for (size_t i = 0; i < replicas.size(); i++)
         conns.insert(std::make_pair(i, mn.connect_sync(replicas[i])));
+    controller = mn.connect_sync(NetAddr("control", 30000));
 }
 
 //static int debug_limit = 0;
@@ -112,6 +116,16 @@ bool try_send(bool check = true) {
 
     if ((!check || waiting.size() < max_async_num) && max_iter_num)
     {
+        uint32_t idx = cnt;
+        if (curr_idx != idx) {
+            ready = 0;
+            curr_idx = idx;
+            std::string s = "client#" + std::to_string(cid) + ", cmd_idx=" + std::to_string(idx);
+            std::vector<uint8_t> hello_msg(s.begin(), s.end());
+            controller->write(std::move(hello_msg));
+            return false;
+        }
+        if (curr_idx == idx && !ready) return false;
         // client backoff
         // if (count_sent > count_exec + max_waiting_exec) {
         //     count_backoff++;
@@ -139,6 +153,12 @@ bool try_send(bool check = true) {
         return true;
     }
     return false;
+}
+
+void client_ready_cmd_handler(MsgReadyCmd &&msg, const Net::conn_t &) {
+    //printf("Client#%u gets ready command with reply=%u\n", cid, msg.magic);
+    ready = 1;
+    while (try_send());
 }
 
 void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
@@ -301,6 +321,7 @@ int main(int argc, char **argv) {
     ev_sigterm.add(SIGTERM);
 
     //mn.reg_handler(client_resp_cmd_handler);
+    mn.reg_handler(client_ready_cmd_handler);
     mn.reg_handler(client_ordering1_resp_cmd_handler);
     mn.reg_handler(client_ordering2_resp_cmd_handler);
     mn.reg_handler(client_ordering_exec_resp_handler);
@@ -397,7 +418,7 @@ int main(int argc, char **argv) {
     // Median timestamps
     for (const auto& [idx, e]: median_timestamps)
     {
-        fprintf(stdout, "idx=%lld, median=%lld, noise=%u, delta=%lld\n",
+        fprintf(stdout, "idx=%lld, median=%lld, noise=%u, median-sent=%lld\n",
                 idx, e.median, e.noise, e.median-e.sent);
     }
 

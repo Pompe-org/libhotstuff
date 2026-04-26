@@ -32,6 +32,14 @@ struct MsgReqCmd {
     MsgReqCmd(DataStream &&s): serialized(std::move(s)) {}
 };
 
+struct MsgReadyCmd {
+    static const opcode_t opcode = 0xF;
+    DataStream serialized;
+    uint8_t magic;
+    MsgReadyCmd(const uint8_t &msg) { serialized << msg; }
+    MsgReadyCmd(DataStream &&s) { s >> magic; }
+};
+
 struct MsgRespCmd {
     static const opcode_t opcode = 0x8;
     DataStream serialized;
