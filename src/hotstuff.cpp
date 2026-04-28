@@ -82,7 +82,7 @@ void HotStuffBase::exec_command(uint256_t cmd_hash, commit_cb_t callback) {
 }
 
 // Add cmd_hash to cmd_pending based on stake weight
-#define NCLIENT 2
+#define NCLIENT 12
 const uint256_t null_hash;
 const int STAKE_WEIGHT[] = {3, 11, 3, 4, 15, 6, 6, 11, 4, 3, 3, 11};
 const int SCHEDULE[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11};
@@ -104,7 +104,6 @@ void HotStuffBase::exec_command_pos(uint256_t cmd_hash, uint32_t cmd_idx, commit
         cmd_pending.enqueue(std::make_pair(cmd_hash, callback));
         cmd_pending_enq_cnt++;
     } else {
-        #define NCLIENT 2
         uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
         int slot_leader = SCHEDULE[(slot / NCLIENT) % 80];
         int prev_slot_leader = SCHEDULE[((slot-1) / NCLIENT) % 80];
@@ -514,7 +513,7 @@ void HotStuffBase::start(
                     //if (proposer == get_id()) {
                     uint32_t slot = pmaker->get_parents()[0]->get_height() + 1;
                     if( SCHEDULE[(slot / NCLIENT) % 80] == get_id() ) { /* rotate based on id */
-                        printf("server #%u proposing for slot#%u\n", get_id(), slot);
+                        //printf("server #%u proposing for slot#%u\n", get_id(), slot);
                         on_propose(cmds, pmaker->get_parents());
                     } else {
                         // This means that I, as the current leader, has finished the last slot
