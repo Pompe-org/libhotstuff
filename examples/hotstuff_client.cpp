@@ -169,8 +169,18 @@ int main(int argc, char **argv) {
     while (try_send());
     ec.dispatch();
 
-    printf("client%d executed %lu commands\n", cid, elapsed.size());
-
+    //printf("client%d executed %lu commands\n", cid, elapsed.size());
+    printf("client%d sent %lu, executed %lu commands, max_async=%u\n", cid, cnt, elapsed.size(), max_async_num);
+    std::vector<double> latencies;
+    for (const auto &e: elapsed)
+    {
+        latencies.push_back(e.second);
+    }
+    std::sort(latencies.begin(), latencies.end());
+    printf("[DEBUG] client%d consensus latency: median = %.6f sec, 90% = %.6f sec, 99% = %.6f sec\n",
+           cid, latencies[elapsed.size() * 0.5],
+           latencies[elapsed.size() * 0.9],
+           latencies[elapsed.size() * 0.99]);
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
     for (const auto &e: elapsed)
     {
